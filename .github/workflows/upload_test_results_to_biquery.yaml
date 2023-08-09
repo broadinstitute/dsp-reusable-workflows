@@ -22,10 +22,15 @@ on:
         type: string
         description: "desciptive: name of the texting context i.e. dev-deploy"
 
-      directory:
+      artifact:
         required: true
         type: string
-        description: "relative path to the test reports folder"
+        description: "name of the artifact to fetch and then parse and push to bigquery"
+
+      #directory:
+      #  required: true
+      #  type: string
+      #  description: "relative path to the test reports folder"
 
       big-query-table:
         required: true
@@ -69,13 +74,6 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: 3.11
-      - name: Auth to GCP
-        id: 'auth'
-        uses: google-github-actions/auth@v1
-        with:
-          token_format: 'access_token'
-          workload_identity_provider: 'projects/1038484894585/locations/global/workloadIdentityPools/github-wi-pool/providers/github-wi-provider'
-          service_account: 'dsp-artifact-registry-push@dsp-artifact-registry.iam.gserviceaccount.com'
       - name: Debug
         run: |-
           pwd
@@ -86,7 +84,22 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install --upgrade google-cloud-bigquery
+      - name: Download Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: my-artifact
+      - name: Debug2
+        run: |-
+          pwd
+          ls -ltra
+      - name: Auth to GCP
+        id: 'auth'
+        uses: google-github-actions/auth@v1
+        with:
+          token_format: 'access_token'
+          workload_identity_provider: 'projects/1038484894585/locations/global/workloadIdentityPools/github-wi-pool/providers/github-wi-provider'
+          service_account: 'dsp-artifact-registry-push@dsp-artifact-registry.iam.gserviceaccount.com'
       - name: Upload test results to Bigquery
         run: |-
           cd ${{ env.CHECKOUT_PATH }}${{ env.SCRIPT_PATH }}
-          python parse_test_results.py --name=${{ inputs.service-name }} --uuid=${{ inputs.test-uuid }} --env=${{ inputs.env }} --subuuid=${{ inputs.subuuid }} --directory=${{ inputs.directory }} --bqtable=${{ inputs.big-query-table }}
+          python parse_test_results.py --name=${{ inputs.service-name }} --uuid=${{ inputs.test-uuid }} --env=${{ inputs.env }} --subuuid=${{ inputs.subuuid }} --directory=./ --bqtable=${{ inputs.big-query-table }}
