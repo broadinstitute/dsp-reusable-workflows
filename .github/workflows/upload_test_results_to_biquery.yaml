@@ -64,7 +64,7 @@ jobs:
         with:
           ref: ${{ inputs.target-branch }}
           repository: broadinstitute/dsp-reusable-workflows
-          path: ${ env.CHECKOUT_PATH}
+          path: ${{ env.CHECKOUT_PATH }}
       - name: Setup Python # Set Python version
         uses: actions/setup-python@v4
         with:
@@ -76,16 +76,16 @@ jobs:
           token_format: 'access_token'
           workload_identity_provider: 'projects/1038484894585/locations/global/workloadIdentityPools/github-wi-pool/providers/github-wi-provider'
           service_account: 'dsp-artifact-registry-push@dsp-artifact-registry.iam.gserviceaccount.com'
+      - name: Debug
+        run: |-
+          pwd
+          ls -ltra
       - name: Install dependencies
         run: |
           cd ${{ env.CHECKOUT_PATH }}${{ env.SCRIPT_PATH }}
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install --upgrade google-cloud-bigquery
-      - name: Debug
-        run: |-
-          pwd
-          ls -ltra
       - name: Upload test results to Bigquery
         run: |-
           cd ${{ env.CHECKOUT_PATH }}${{ env.SCRIPT_PATH }}
