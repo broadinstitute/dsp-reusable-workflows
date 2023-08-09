@@ -55,6 +55,7 @@ on:
 env:
   CHECKOUT_PATH: "dsp-reusable-workflows/"
   SCRIPT_PATH: "upload-test-results/"
+  ARTIFACT_PATH: "test-results/"
 jobs:
   # This job will only run unit tests and coverage report is generated based on them.
   # Integration tests are handled in a separate job
@@ -88,7 +89,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: ${{ inputs.artifact }}
-          path: test-results
+          path: ${{ env.ARTIFACT_PATH }}
       - name: Debug2
         run: |-
           pwd
@@ -103,4 +104,5 @@ jobs:
       - name: Upload test results to Bigquery
         run: |-
           cd ${{ env.CHECKOUT_PATH }}${{ env.SCRIPT_PATH }}
-          python parse_test_results.py --name=${{ inputs.service-name }} --uuid=${{ inputs.test-uuid }} --env=${{ inputs.env }} --subuuid=${{ inputs.subuuid }} --directory=test-results --bqtable=${{ inputs.big-query-table }}
+          ls -ltra
+          python parse_test_results.py --name=${{ inputs.service-name }} --uuid=${{ inputs.test-uuid }} --env=${{ inputs.env }} --subuuid=${{ inputs.subuuid }} --directory=${{ env.ARTITFACT_PATH }} --bqtable=${{ inputs.big-query-table }}
