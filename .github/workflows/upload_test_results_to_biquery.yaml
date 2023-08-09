@@ -53,9 +53,9 @@ on:
         description: "github branch of dsp-reusable-workflows"
 
 env:
-  CHECKOUT_PATH: "dsp-reusable-workflows/"
-  SCRIPT_PATH: "upload-test-results/"
-  ARTIFACT_PATH: "test-results/"
+  CHECKOUT_PATH: "dsp-reusable-workflows/" # arbitrary folder name to checkout to for organizational purposes
+  SCRIPT_PATH: "upload-test-results/" # location in the checked-out repo of the script to run
+  ARTIFACT_PATH: "test-results/" # arbitrary folder name to download test-results to for organizational purposes
 jobs:
   # This job will only run unit tests and coverage report is generated based on them.
   # Integration tests are handled in a separate job
@@ -89,7 +89,8 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: ${{ inputs.artifact }}
-          path: ${{ env.ARTIFACT_PATH }}
+          # gotta put this where the script will be run from
+          path: ${{ env.CHECKOUT_PATH }}${{ env.SCRIPT_PATH }}${{ env.ARTIFACT_PATH }}
       - name: Debug2
         run: |-
           pwd
