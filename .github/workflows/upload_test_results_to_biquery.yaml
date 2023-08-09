@@ -87,7 +87,7 @@ jobs:
       - name: Download Artifact
         uses: actions/download-artifact@v3
         with:
-          name: my-artifact
+          name: ${{ inputs.artifact }}
       - name: Debug2
         run: |-
           pwd
