@@ -78,7 +78,7 @@ jobs:
       - name: Debug
         run: |-
           pwd
-          ls -ltra
+          ls -ltraR
       - name: Install dependencies
         run: |
           cd ${{ env.CHECKOUT_PATH }}${{ env.SCRIPT_PATH }}
@@ -94,7 +94,7 @@ jobs:
       - name: Debug2
         run: |-
           pwd
-          ls -ltra
+          ls -ltraR
       - name: Auth to GCP
         id: 'auth'
         uses: google-github-actions/auth@v1
@@ -105,5 +105,5 @@ jobs:
       - name: Upload test results to Bigquery
         run: |-
           cd ${{ env.CHECKOUT_PATH }}${{ env.SCRIPT_PATH }}
-          ls -ltra
+          ls -ltraR
           python parse_test_results.py --name=${{ inputs.service-name }} --uuid=${{ inputs.test-uuid }} --env=${{ inputs.env }} --subuuid=${{ inputs.subuuid }} --directory=${{ env.ARTITFACT_PATH }} --bqtable=${{ inputs.big-query-table }}
