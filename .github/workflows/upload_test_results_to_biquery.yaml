@@ -106,4 +106,4 @@ jobs:
         run: |-
           cd ${{ env.CHECKOUT_PATH }}${{ env.SCRIPT_PATH }}
           ls -ltraR
-          python parse_test_results.py --name=${{ inputs.service-name }} --uuid=${{ inputs.test-uuid }} --env=${{ inputs.env }} --subuuid=${{ inputs.subuuid }} --directory=${{ env.ARTITFACT_PATH }} --bqtable=${{ inputs.big-query-table }}
+          python parse_test_results.py --name=${{ inputs.service-name }} --uuid=${{ inputs.test-uuid }} --env=${{ inputs.env }} --subuuid=${{ inputs.subuuid }} --directory=${{ env.ARTIFACT_PATH }} --bqtable=${{ inputs.big-query-table }}
