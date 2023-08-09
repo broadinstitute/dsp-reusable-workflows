@@ -27,11 +27,6 @@ on:
         type: string
         description: "name of the artifact to fetch and then parse and push to bigquery"
 
-      #directory:
-      #  required: true
-      #  type: string
-      #  description: "relative path to the test reports folder"
-
       big-query-table:
         required: true
         type: string
@@ -75,10 +70,6 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: 3.11
-      - name: Debug
-        run: |-
-          pwd
-          ls -ltraR
       - name: Install dependencies
         run: |
           cd ${{ env.CHECKOUT_PATH }}${{ env.SCRIPT_PATH }}
@@ -91,10 +82,6 @@ jobs:
           name: ${{ inputs.artifact }}
           # gotta put this where the script will be run from
           path: ${{ env.CHECKOUT_PATH }}${{ env.SCRIPT_PATH }}${{ env.ARTIFACT_PATH }}
-      - name: Debug2
-        run: |-
-          pwd
-          ls -ltraR
       - name: Auth to GCP
         id: 'auth'
         uses: google-github-actions/auth@v1
