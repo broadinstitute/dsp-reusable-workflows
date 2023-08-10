@@ -1,0 +1,96 @@
+name: Upload Test Results to BigQuery
+on:
+  workflow_call:
+    inputs:
+
+      ##
+      ## Required configuration:
+      ##
+
+      service-name:
+        required: true
+        type: string
+        description: "The name of the service being tested"
+
+      test-uuid:
+        required: true
+        type: string
+        description: "unique id attached to the test run"
+
+      env:
+        required: true
+        type: string
+        description: "desciptive: name of the texting context i.e. dev-deploy"
+
+      artifact:
+        required: true
+        type: string
+        description: "name of the artifact to fetch and then parse and push to bigquery"
+
+      big-query-table:
+        required: true
+        type: string
+        description: "full GCP name of the table to append to. i.e. my-project.my-dataset.table-name"
+      
+      ##
+      ## Optional configurations:
+      ##
+
+      subuuid:
+        required: false
+        type: string
+        description: "unique id of a sub test run, if any"
+
+      target-branch:
+        required: false
+        type: string
+        default: "main"
+        description: "github branch of dsp-reusable-workflows"
+
+env:
+  CHECKOUT_PATH: "dsp-reusable-workflows/" # arbitrary folder name to checkout to for organizational purposes
+  SCRIPT_PATH: "upload-test-results/" # location in the checked-out repo of the script to run
+  ARTIFACT_PATH: "test-results/" # arbitrary folder name to download test-results to for organizational purposes
+jobs:
+  # This job will only run unit tests and coverage report is generated based on them.
+  # Integration tests are handled in a separate job
+  upload-test-results:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - name: "Checkout dsp-reusable-workflows"
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.target-branch }}
+          repository: broadinstitute/dsp-reusable-workflows
+          path: ${{ env.CHECKOUT_PATH }}
+      - name: Setup Python # Set Python version
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+      - name: Install dependencies
+        run: |
+          cd ${{ env.CHECKOUT_PATH }}${{ env.SCRIPT_PATH }}
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install --upgrade google-cloud-bigquery
+      - name: Download Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.artifact }}
+          # gotta put this where the script will be run from
+          path: ${{ env.CHECKOUT_PATH }}${{ env.SCRIPT_PATH }}${{ env.ARTIFACT_PATH }}
+      - name: Auth to GCP
+        id: 'auth'
+        uses: google-github-actions/auth@v1
+        with:
+          token_format: 'access_token'
+          workload_identity_provider: 'projects/1038484894585/locations/global/workloadIdentityPools/github-wi-pool/providers/github-wi-provider'
+          service_account: 'dsp-artifact-registry-push@dsp-artifact-registry.iam.gserviceaccount.com'
+      - name: Upload test results to Bigquery
+        run: |-
+          cd ${{ env.CHECKOUT_PATH }}${{ env.SCRIPT_PATH }}
+          ls -ltraR
+          python parse_test_results.py --name=${{ inputs.service-name }} --uuid=${{ inputs.test-uuid }} --env=${{ inputs.env }} --subuuid=${{ inputs.subuuid }} --directory=${{ env.ARTIFACT_PATH }} --bqtable=${{ inputs.big-query-table }}
