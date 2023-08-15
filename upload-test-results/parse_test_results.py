@@ -175,6 +175,8 @@ def main(main_args):
     if main_args.env:
         additional_fields["env"] = main_args.env
 
+    print(additional_fields)
+
     # Process test results
     results_as_list_of_json = process_directory(main_args.testDirectory, additional_fields)
 
@@ -237,5 +239,6 @@ if __name__ == '__main__':
         )
 
     main_args = parser.parse_args()
+    print(main_args)
 
     main(main_args)
