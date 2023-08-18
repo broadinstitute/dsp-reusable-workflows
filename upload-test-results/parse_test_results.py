@@ -1,4 +1,4 @@
-import sys, os
+import os
 import xmltodict, json
 import pprint
 import datetime
@@ -143,12 +143,12 @@ def append_file_to_bigquery(filename, bq_table_id):
     client = bigquery.Client(project="broad-dsde-qa")
 
     my_job_config = bigquery.LoadJobConfig(
-        source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON, autodetect=True,
-    )
+        source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON)
 
     # reopen the file and upload it 
     with open(filename, "rb") as report_file:
-        client.load_table_from_file(report_file, bq_table_id, job_config=my_job_config)
+        load_job = client.load_table_from_file(report_file, bq_table_id, job_config=my_job_config)
+        load_job.result() # wait for job to finish and report any errors 
 
 
 def main(main_args):
@@ -174,6 +174,8 @@ def main(main_args):
         additional_fields["serviceTestRunUUID"] = main_args.serviceTestRunUUID
     if main_args.env:
         additional_fields["env"] = main_args.env
+
+    print(additional_fields)
 
     # Process test results
     results_as_list_of_json = process_directory(main_args.testDirectory, additional_fields)
@@ -237,5 +239,6 @@ if __name__ == '__main__':
         )
 
     main_args = parser.parse_args()
+    print(main_args)
 
     main(main_args)
