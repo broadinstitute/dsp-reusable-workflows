@@ -143,8 +143,7 @@ def append_file_to_bigquery(filename, bq_table_id):
     client = bigquery.Client(project="broad-dsde-qa")
 
     my_job_config = bigquery.LoadJobConfig(
-        source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON, autodetect=True,
-    )
+        source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON)
 
     # reopen the file and upload it 
     with open(filename, "rb") as report_file:
