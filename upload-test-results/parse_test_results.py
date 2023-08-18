@@ -1,4 +1,4 @@
-import sys, os
+import os
 import xmltodict, json
 import pprint
 import datetime
@@ -148,7 +148,8 @@ def append_file_to_bigquery(filename, bq_table_id):
 
     # reopen the file and upload it 
     with open(filename, "rb") as report_file:
-        client.load_table_from_file(report_file, bq_table_id, job_config=my_job_config)
+        load_job = client.load_table_from_file(report_file, bq_table_id, job_config=my_job_config)
+        load_job.result() # wait for job to finish and report any errors 
 
 
 def main(main_args):
