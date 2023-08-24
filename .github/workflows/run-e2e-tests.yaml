@@ -1,9 +1,9 @@
 name: run-azure-e2e-tests
 
 on:
-  # push:
-  #   branches:
-  #     - aj-1287-attempt-workflow
+  push:
+    branches:
+      - aj-1287-attempt-workflow
   workflow_dispatch:
     inputs:
       #TODO do we need a branch?
