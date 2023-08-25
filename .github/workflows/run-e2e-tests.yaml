@@ -6,7 +6,7 @@ on:
       - aj-1287-attempt-workflow
   workflow_dispatch:
     inputs:
-      #TODO do we need a branch?
+      #TODO how to decide/setup branch/versions etc
       branch:
         description: 'Branch to run tests on'
         required: true
@@ -56,6 +56,7 @@ on:
 
 env:
   BEE_NAME: '${{ github.event.repository.name }}-${{ github.run_id }}-${{ github.run_attempt}}-dev'
+  #TODO: is this token needed/used?
   TOKEN: '${{ secrets.BROADBOT_TOKEN }}' # github token for access to kick off a job in the private repo
 
 jobs:
@@ -143,7 +144,7 @@ jobs:
           workflow: bee-create
           repo: broadinstitute/terra-github-workflows
           ref: refs/heads/main
-          token: ${{ env.TOKEN }}
+          # token: ${{ env.TOKEN }}
           inputs: '{
             "bee-name": "${{ env.BEE_NAME }}",
             "bee-template-name": "run-e2e-azure-tests",
@@ -174,7 +175,7 @@ jobs:
           workflow: attach-landing-zone-to-bee.yaml
           repo: broadinstitute/terra-github-workflows
           ref: refs/heads/iv-az-e2e-1
-          token: ${{ env.TOKEN }}
+          # token: ${{ env.TOKEN }}
           inputs: '{
             "bee-name": "${{ env.BEE_NAME }}",
             "billing-project": "${{ needs.params-gen.outputs.project-name }}",
@@ -246,7 +247,7 @@ jobs:
           workflow: .github/workflows/delete-billing-project-v2-from-bee.yaml
           repo: broadinstitute/terra-github-workflows
           ref: refs/heads/iv-az-e2e-1
-          token: ${{ env.TOKEN }}
+          # token: ${{ env.TOKEN }}
           inputs: '{
             "bee-name": "${{ env.BEE_NAME }}",
             "billing-project": "${{ needs.params-gen.outputs.project-name }}",
@@ -265,5 +266,5 @@ jobs:
           workflow: bee-destroy
           repo: broadinstitute/terra-github-workflows
           ref: refs/heads/main
-          token: ${{ env.TOKEN }}
+          # token: ${{ env.TOKEN }}
           inputs: '{ "bee-name": "${{ env.BEE_NAME }}" }'
