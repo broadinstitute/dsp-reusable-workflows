@@ -222,7 +222,7 @@ jobs:
       - name: "Checkout dsp-reusable-workflows"
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.target-branch }}
+          ref: aj-1287-attempt-workflow-call #${{ inputs.target-branch }}
           repository: broadinstitute/dsp-reusable-workflows
           path: ${{ env.CHECKOUT_PATH }}
 
