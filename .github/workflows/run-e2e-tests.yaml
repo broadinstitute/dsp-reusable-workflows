@@ -59,10 +59,10 @@ on:
         required: true
         type: string
 
-    secrets:
-      user-access-token:
-        required: true
-        description: "user bearer access token for terra api access"
+#    secrets:
+#      user-access-token:
+#        required: true
+#        description: "user bearer access token for terra api access"
 
 
 env:
