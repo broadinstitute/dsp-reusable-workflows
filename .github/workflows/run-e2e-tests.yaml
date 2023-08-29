@@ -1,10 +1,7 @@
 name: run-azure-e2e-tests
 
 on:
-  push:
-    branches:
-      - aj-1287-attempt-workflow
-  workflow_dispatch:
+  workflow_call:
     inputs:
       #TODO how to decide/setup branch/versions etc
       branch:
@@ -12,80 +9,102 @@ on:
         required: true
         default: 'main'
         type: string
-      delete-bee:
-        description: 'Delete created bee after running tests'
-        required: true
-        default: true
-        type: boolean
+#      delete-bee:
+#        description: 'Delete created bee after running tests'
+#        required: true
+#        default: true
+#        type: boolean
         #TODO: what subjects do we need
-      owner-subject:
-        description: 'Owner subject (used for creating billing project in E2E testing)'
+#      owner-subject:
+#        description: 'Owner subject (used for creating billing project in E2E testing)'
+#        required: true
+#        default: 'hermione.owner@quality.firecloud.org'
+#        type: string
+#      student-subjects:
+#        description: 'A JSON array of Student subjects used for E2E testing'
+#        required: true
+#        default: '["harry.potter@quality.firecloud.org","ron.weasley@quality.firecloud.org"]'
+#        type: string
+#      service-account:
+#        description: 'Email address or unique identifier of the Google Cloud service account for which to generate credentials'
+#        required: true
+#        default: 'firecloud-qa@broad-dsde-qa.iam.gserviceaccount.com'
+#        type: string
+#      tenant-id:
+#        description: 'Azure tenant ID. Set the default tenant ID to match your App deployment on Azure'
+#        required: true
+#        default: 'fad90753-2022-4456-9b0a-c7e5b934e408'
+#        type: string
+#      subscription-id:
+#        description: 'Azure subscription ID. Set the default subscription ID to match your App deployment on Azure'
+#        required: false
+#        default: 'f557c728-871d-408c-a28b-eb6b2141a087'
+#        type: string
+#      mrg-id:
+#        description: 'Azure Managed Resource Group name. Set the default MRG to match your App deployment on Azure'
+#        required: true
+#        default: 'staticTestingMrg'
+#        type: string
+#      landing-zone-id:
+#        description: 'Landing Zone ID. Set the LZID to match your App deployment on Azure'
+#        required: true
+#        default: 'f41c1a97-179b-4a18-9615-5214d79ba600'
+#        type: string
+      bee-name:
+        description: 'bee name'
         required: true
-        default: 'hermione.owner@quality.firecloud.org'
         type: string
-      student-subjects:
-        description: 'A JSON array of Student subjects used for E2E testing'
+      billing-project-name:
+        description: 'name of billing project'
         required: true
-        default: '["harry.potter@quality.firecloud.org","ron.weasley@quality.firecloud.org"]'
-        type: string
-      service-account:
-        description: 'Email address or unique identifier of the Google Cloud service account for which to generate credentials'
-        required: true
-        default: 'firecloud-qa@broad-dsde-qa.iam.gserviceaccount.com'
-        type: string
-      tenant-id:
-        description: 'Azure tenant ID. Set the default tenant ID to match your App deployment on Azure'
-        required: true
-        default: 'fad90753-2022-4456-9b0a-c7e5b934e408'
-        type: string
-      subscription-id:
-        description: 'Azure subscription ID. Set the default subscription ID to match your App deployment on Azure'
-        required: false
-        default: 'f557c728-871d-408c-a28b-eb6b2141a087'
-        type: string
-      mrg-id:
-        description: 'Azure Managed Resource Group name. Set the default MRG to match your App deployment on Azure'
-        required: true
-        default: 'staticTestingMrg'
-        type: string
-      landing-zone-id:
-        description: 'Landing Zone ID. Set the LZID to match your App deployment on Azure'
-        required: true
-        default: 'f41c1a97-179b-4a18-9615-5214d79ba600'
         type: string
 
+    secrets:
+      user-access-token:
+        required: true
+        description: "user bearer access token for terra api access"
+
+
 env:
-  BEE_NAME: '${{ github.event.repository.name }}-${{ github.run_id }}-${{ github.run_attempt}}-dev'
-  #TODO: is this token needed/used?
-  TOKEN: '${{ secrets.BROADBOT_TOKEN }}' # github token for access to kick off a job in the private repo
+  CHECKOUT_PATH: "dsp-reusable-workflows/" # arbitrary folder name to checkout to for organizational purposes
+  SCRIPT_PATH: "e2e-test/" # location in the checked-out repo of the script to run
+  ARTIFACT_PATH: "test-results/" # arbitrary folder name to download test-results to for organizational purposes
+  BEE_NAME: '${{ inputs.bee-name }}'
+  BILLING_PROJECT_NAME: '${{ inputs.billing-project-name }}' # github token for access to kick off a job in the private repo
+  AZURE_TOKEN: '${{ secrets.user-access-token }}' # github token for access to kick off a job in the private repo
 
 jobs:
   init-github-context:
     runs-on: ubuntu-latest
-    outputs:
-      branch: ${{ steps.extract-inputs.outputs.branch }}
-      delete-bee: ${{ steps.extract-inputs.outputs.delete-bee }}
-      student-subjects: ${{ steps.extract-inputs.outputs.student-subjects }}
-      owner-subject: ${{ steps.extract-inputs.outputs.owner-subject }}
-      service-account: ${{ steps.extract-inputs.outputs.service-account }}
-      tenant-id: ${{ steps.extract-inputs.outputs.tenant-id }}
-      subscription-id: ${{ steps.extract-inputs.outputs.subscription-id }}
-      mrg-id: ${{ steps.extract-inputs.outputs.mrg-id }}
-      landing-zone-id: ${{ steps.extract-inputs.outputs.landing-zone-id }}
+#    outputs:
+#      branch: ${{ steps.extract-inputs.outputs.branch }}
+#      delete-bee: ${{ steps.extract-inputs.outputs.delete-bee }}
+#      student-subjects: ${{ steps.extract-inputs.outputs.student-subjects }}
+#      owner-subject: ${{ steps.extract-inputs.outputs.owner-subject }}
+#      service-account: ${{ steps.extract-inputs.outputs.service-account }}
+#      tenant-id: ${{ steps.extract-inputs.outputs.tenant-id }}
+#      subscription-id: ${{ steps.extract-inputs.outputs.subscription-id }}
+#      mrg-id: ${{ steps.extract-inputs.outputs.mrg-id }}
+#      landing-zone-id: ${{ steps.extract-inputs.outputs.landing-zone-id }}
     steps:
       - name: Get inputs or use defaults
         id: extract-inputs
         run: |
-          echo "branch=${{ inputs.branch                            || 'develop' }}" >> "$GITHUB_OUTPUT"
-          echo "delete-bee=${{ inputs.delete-bee                    || false }}" >> "$GITHUB_OUTPUT"
-          echo "owner-subject=${{ inputs.owner-subject              || 'hermione.owner@quality.firecloud.org' }}" >> "$GITHUB_OUTPUT"
-          echo "student-subjects=${{ toJson(inputs.student-subjects || '["harry.potter@quality.firecloud.org","ron.weasley@quality.firecloud.org"]') }}" >> "$GITHUB_OUTPUT"
-          echo "service-account=${{ inputs.service-account          || 'firecloud-qa@broad-dsde-qa.iam.gserviceaccount.com' }}" >> "$GITHUB_OUTPUT"
+#          echo "owner-subject=${{ inputs.owner-subject              || 'hermione.owner@quality.firecloud.org' }}" >> "$GITHUB_OUTPUT"
+#          echo "owner-subject=${{ inputs.owner-subject              || 'hermione.owner@quality.firecloud.org' }}" >> "$GITHUB_OUTPUT"
+#          echo "owner-subject=${{ inputs.owner-subject              || 'hermione.owner@quality.firecloud.org' }}" >> "$GITHUB_OUTPUT"
+#          echo "owner-subject=${{ inputs.owner-subject              || 'hermione.owner@quality.firecloud.org' }}" >> "$GITHUB_OUTPUT"
+#          echo "owner-subject=${{ inputs.owner-subject              || 'hermione.owner@quality.firecloud.org' }}" >> "$GITHUB_OUTPUT"
+#          echo "owner-subject=${{ inputs.owner-subject              || 'hermione.owner@quality.firecloud.org' }}" >> "$GITHUB_OUTPUT"
+#          echo "student-subjects=${{ toJson(inputs.student-subjects || '["harry.potter@quality.firecloud.org","ron.weasley@quality.firecloud.org"]') }}" >> "$GITHUB_OUTPUT"
+#          echo "branch=${{ inputs.branch                            || 'develop' }}" >> "$GITHUB_OUTPUT"
+#          echo "delete-bee=${{ inputs.delete-bee                    || false }}" >> "$GITHUB_OUTPUT"
+#          echo "service-account=${{ inputs.service-account          || 'firecloud-qa@broad-dsde-qa.iam.gserviceaccount.com' }}" >> "$GITHUB_OUTPUT"
           ######### Set the following IDs to match the Coordinates of your App deployment on Azure #########
-          echo "tenant-id=${{ inputs.tenant-id                      || 'fad90753-2022-4456-9b0a-c7e5b934e408' }}" >> "$GITHUB_OUTPUT"
-          echo "subscription-id=${{ inputs.subscription-id          || 'f557c728-871d-408c-a28b-eb6b2141a087' }}" >> "$GITHUB_OUTPUT"
-          echo "mrg-id=${{ inputs.mrg-id                            || 'staticTestingMrg' }}" >> "$GITHUB_OUTPUT"
-          echo "landing-zone-id=${{ inputs.landing-zone-id          || 'f41c1a97-179b-4a18-9615-5214d79ba600' }}" >> "$GITHUB_OUTPUT"
+#          echo "tenant-id=${{ inputs.tenant-id                      || 'fad90753-2022-4456-9b0a-c7e5b934e408' }}" >> "$GITHUB_OUTPUT"
+#          echo "subscription-id=${{ inputs.subscription-id          || 'f557c728-871d-408c-a28b-eb6b2141a087' }}" >> "$GITHUB_OUTPUT"
+#          echo "mrg-id=${{ inputs.mrg-id                            || 'staticTestingMrg' }}" >> "$GITHUB_OUTPUT"
+#          echo "landing-zone-id=${{ inputs.landing-zone-id          || 'f41c1a97-179b-4a18-9615-5214d79ba600' }}" >> "$GITHUB_OUTPUT"
 
 #TODO what branch/repo/what are we using here
 #  rawls-build-tag-publish-job:
@@ -127,90 +146,110 @@ jobs:
 #          echo "$GITHUB_CONTEXT"
 #          echo "custom-version-json={\\\"rawls\\\":{\\\"appVersion\\\":\\\"${{ steps.tag.outputs.tag }}\\\"}}" >> $GITHUB_OUTPUT
 
-  create-bee-workflow:
-    runs-on: ubuntu-latest
+#  create-bee-workflow:
+#    runs-on: ubuntu-latest
 #    needs: [rawls-build-tag-publish-job]
-    permissions:
-      contents: 'read'
-      id-token: 'write'
-    steps:
+#    permissions:
+#      contents: 'read'
+#      id-token: 'write'
+#    steps:
 #      - name: Echo Rawls version
 #        run: |
 #          echo '${{ needs.rawls-build-tag-publish-job.outputs.custom-version-json }}'
 
-      - name: dispatch to terra-github-workflows
-        uses: broadinstitute/workflow-dispatch@v3
-        with:
-          workflow: bee-create
-          repo: broadinstitute/terra-github-workflows
-          ref: refs/heads/main
-          # token: ${{ env.TOKEN }}
-          inputs: '{
-            "bee-name": "${{ env.BEE_NAME }}",
-            "bee-template-name": "run-e2e-azure-tests",
-            "version-template": "dev"
-          }'
+#      - name: dispatch to terra-github-workflows
+#        uses: broadinstitute/workflow-dispatch@v3
+#        with:
+#          workflow: bee-create
+#          repo: broadinstitute/terra-github-workflows
+#          ref: refs/heads/main
+#          # token: ${{ env.TOKEN }}
+#          inputs: '{
+#            "bee-name": "${{ env.BEE_NAME }}",
+#            "bee-template-name": "run-e2e-azure-tests",
+#            "version-template": "dev"
+#          }'
 
   # This job can be used for generating parameters for E2E tests (e.g. a random project name).
-  params-gen:
-    runs-on: ubuntu-latest
-    outputs:
-      project-name: ${{ steps.gen.outputs.project_name }}
-    steps:
-      - uses: 'actions/checkout@v3'
+#  params-gen:
+#    runs-on: ubuntu-latest
+#    outputs:
+#      project-name: ${{ steps.gen.outputs.project_name }}
+#    steps:
+#      - uses: 'actions/checkout@v3'
+#
+#      - name: Generate a random billing project name
+#        id: 'gen'
+#        run: |
+#          project_name=$(echo "tmp-billing-project-$(uuidgen)" | cut -c -30)
+#          echo "project_name=${project_name}" >> $GITHUB_OUTPUT
 
-      - name: Generate a random billing project name
-        id: 'gen'
-        run: |
-          project_name=$(echo "tmp-billing-project-$(uuidgen)" | cut -c -30)
-          echo "project_name=${project_name}" >> $GITHUB_OUTPUT
-
-  attach-landing-zone-to-bee-workflow:
-    runs-on: ubuntu-latest
-    needs: [init-github-context, create-bee-workflow, params-gen]
-    steps:
-      - name: dispatch to terra-github-workflows
-        uses: broadinstitute/workflow-dispatch@v3
-        with:
-          workflow: attach-landing-zone-to-bee.yaml
-          repo: broadinstitute/terra-github-workflows
-          ref: refs/heads/iv-az-e2e-1
-          # token: ${{ env.TOKEN }}
-          inputs: '{
-            "bee-name": "${{ env.BEE_NAME }}",
-            "billing-project": "${{ needs.params-gen.outputs.project-name }}",
-            "tenant-id": "${{ needs.init-github-context.outputs.tenant-id }}",
-            "subscription-id": "${{ needs.init-github-context.outputs.subscription-id }}",
-            "mrg-id": "${{ needs.init-github-context.outputs.mrg-id }}",
-            "landing-zone-id": "${{ needs.init-github-context.outputs.landing-zone-id }}",
-            "billing-project-creator": "${{ needs.init-github-context.outputs.owner-subject }}",
-            "service-account": "${{ needs.init-github-context.outputs.service-account }}"
-          }'
+#  attach-landing-zone-to-bee-workflow:
+#    runs-on: ubuntu-latest
+#    needs: [init-github-context, create-bee-workflow, params-gen]
+#    steps:
+#      - name: dispatch to terra-github-workflows
+#        uses: broadinstitute/workflow-dispatch@v3
+#        with:
+#          workflow: attach-landing-zone-to-bee.yaml
+#          repo: broadinstitute/terra-github-workflows
+#          ref: refs/heads/iv-az-e2e-1
+#          # token: ${{ env.TOKEN }}
+#          inputs: '{
+#            "bee-name": "${{ env.BEE_NAME }}",
+#            "billing-project": "${{ needs.params-gen.outputs.project-name }}",
+#            "tenant-id": "${{ needs.init-github-context.outputs.tenant-id }}",
+#            "subscription-id": "${{ needs.init-github-context.outputs.subscription-id }}",
+#            "mrg-id": "${{ needs.init-github-context.outputs.mrg-id }}",
+#            "landing-zone-id": "${{ needs.init-github-context.outputs.landing-zone-id }}",
+#            "billing-project-creator": "${{ needs.init-github-context.outputs.owner-subject }}",
+#            "service-account": "${{ needs.init-github-context.outputs.service-account }}"
+#          }'
 
   run-e2e-test-job:
     runs-on: ubuntu-latest
-    needs: [init-github-context, create-bee-workflow, params-gen, attach-landing-zone-to-bee-workflow]
+    needs: [init-github-context] #, create-bee-workflow, params-gen, attach-landing-zone-to-bee-workflow]
     steps:
-      - name: Configure the user subjects for the test
-        run: |
-          escapedJSON=$(echo '${{ needs.init-github-context.outputs.student-subjects }}' | sed 's/"/\"/g')
-          echo "USER_SUBJECTS={\"owners\": [\"${{ needs.init-github-context.outputs.owner-subject }}\"], \"students\": $escapedJSON}" >> $GITHUB_ENV
+#      - name: Configure the user subjects for the test
+#        run: |
+#          escapedJSON=$(echo '${{ needs.init-github-context.outputs.student-subjects }}' | sed 's/"/\"/g')
+#          echo "USER_SUBJECTS={\"owners\": [\"${{ needs.init-github-context.outputs.owner-subject }}\"], \"students\": $escapedJSON}" >> $GITHUB_ENV
 
-      - name: Echo user subjects used for this test
-        run: |
-          echo ${{ env.USER_SUBJECTS }}
+#      - name: Echo user subjects used for this test
+#        run: |
+#          echo ${{ env.USER_SUBJECTS }}
 
-      - name: Set up Python 3.8
+      - name: "Checkout dsp-reusable-workflows"
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.target-branch }}
+          repository: broadinstitute/dsp-reusable-workflows
+          path: ${{ env.CHECKOUT_PATH }}
+
+      - name: Setup Python # Set Python version
         uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: 3.11
 
       - name: Install pytest
         run: |
+          cd ${{ env.CHECKOUT_PATH }}${{ env.SCRIPT_PATH }}
           pip install pytest
+
+      - name: 'Obtain OAuth2 2.0 Access Token'
+        id: 'obtain-token'
+        uses: google-github-actions/auth@v1
+        with:
+          token_format: 'access_token'
+          workload_identity_provider: 'projects/1038484894585/locations/global/workloadIdentityPools/github-wi-pool/providers/github-wi-provider'
+          service_account: 'firecloud-qa@broad-dsde-qa.iam.gserviceaccount.com'
+          access_token_scopes: 'profile, email, openid'
+          access_token_subject: 'hermione.owner@quality.firecloud.org'
+          export_environment_variables: false 
 
       - name: Run test
         run: |
+          AZURE_TOKEN= ${{ steps.obtain-token.outputs.access_token }}\
           pytest e2e-test/e2etest.py
 
 #      - name: dispatch to terra-github-workflows
@@ -236,35 +275,37 @@ jobs:
 #            "user-subjects": ${{ toJson(env.USER_SUBJECTS) }}
 #          }'
 
-  delete-billing-project-v2-from-bee-workflow:
-    runs-on: ubuntu-latest
-    needs: [init-github-context, params-gen, run-e2e-test-job]
-    if: false
-    steps:
-      - name: dispatch to terra-github-workflows
-        uses: broadinstitute/workflow-dispatch@v3
-        with:
-          workflow: .github/workflows/delete-billing-project-v2-from-bee.yaml
-          repo: broadinstitute/terra-github-workflows
-          ref: refs/heads/iv-az-e2e-1
-          # token: ${{ env.TOKEN }}
-          inputs: '{
-            "bee-name": "${{ env.BEE_NAME }}",
-            "billing-project": "${{ needs.params-gen.outputs.project-name }}",
-            "billing-project-owner": "${{ needs.init-github-context.outputs.owner-subject }}",
-            "service-account": "${{ needs.init-github-context.outputs.service-account }}"
-          }'
-
-  destroy-bee-workflow:
-    runs-on: ubuntu-latest
-    needs: [init-github-context, run-e2e-test-job, delete-billing-project-v2-from-bee-workflow]
-    if: ${{ needs.init-github-context.outputs.delete-bee && always() }} # always run to confirm bee is destroyed unless explicitly requested not to
-    steps:
-      - name: dispatch to terra-github-workflows
-        uses: broadinstitute/workflow-dispatch@v3
-        with:
-          workflow: bee-destroy
-          repo: broadinstitute/terra-github-workflows
-          ref: refs/heads/main
-          # token: ${{ env.TOKEN }}
-          inputs: '{ "bee-name": "${{ env.BEE_NAME }}" }'
+#  delete-billing-project-v2-from-bee-workflow:
+#    runs-on: ubuntu-latest
+#    needs: [init-github-context, params-gen, run-e2e-test-job]
+#    if: false
+#    steps:
+#      - name: dispatch to terra-github-workflows
+#        uses: broadinstitute/workflow-dispatch@v3
+#        with:
+#          workflow: .github/workflows/delete-billing-project-v2-from-bee.yaml
+#          repo: broadinstitute/terra-github-workflows
+#          ref: refs/heads/iv-az-e2e-1
+#          wait-for-completion: false
+#          # token: ${{ env.TOKEN }}
+#          inputs: '{
+#            "bee-name": "${{ env.BEE_NAME }}",
+#            "billing-project": "${{ needs.params-gen.outputs.project-name }}",
+#            "billing-project-owner": "${{ needs.init-github-context.outputs.owner-subject }}",
+#            "service-account": "${{ needs.init-github-context.outputs.service-account }}"
+#          }'
+#
+#  destroy-bee-workflow:
+#    runs-on: ubuntu-latest
+#    needs: [init-github-context, run-e2e-test-job, delete-billing-project-v2-from-bee-workflow]
+#    if: ${{ needs.init-github-context.outputs.delete-bee && always() }} # always run to confirm bee is destroyed unless explicitly requested not to
+#    steps:
+#      - name: dispatch to terra-github-workflows
+#        uses: broadinstitute/workflow-dispatch@v3
+#        with:
+#          workflow: bee-destroy
+#          repo: broadinstitute/terra-github-workflows
+#          ref: refs/heads/main
+#          wait-for-completion: false
+#          # token: ${{ env.TOKEN }}
+#          inputs: '{ "bee-name": "${{ env.BEE_NAME }}" }'
