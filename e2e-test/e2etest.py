@@ -48,10 +48,10 @@ if wds_upload:
             continue
         upload_wds_data(wds_url, workspace, "resources/test.tsv", "test", azure_token)
 
-		if cbas_submit_workflow:
+        if cbas_submit_workflow:
 		    # next trigger a workflow in each of the workspaces, at this time this doesnt monitor if this was succesful or not
 		    # upload file needed for workflow to run
-		    upload_wds_data(wds_url, workspace, "resources/sraloadtest.tsv", "sraloadtest", azure_token)
-		    submit_workflow_assemble_refbased(workspace, "resources/assemble_refbased.json", azure_token)
+            upload_wds_data(wds_url, workspace, "resources/sraloadtest.tsv", "sraloadtest", azure_token)
+            submit_workflow_assemble_refbased(workspace, "resources/assemble_refbased.json", azure_token)
 
 print("LOAD TEST COMPLETE.")
