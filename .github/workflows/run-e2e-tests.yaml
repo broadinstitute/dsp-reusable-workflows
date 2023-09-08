@@ -119,6 +119,7 @@ jobs:
 
       - name: Run test
         run: |
+          ls -ltraR
           cd ${{ env.CHECKOUT_PATH }}${{ env.SCRIPT_PATH }}
           AZURE_TOKEN= ${{ steps.obtain-token.outputs.access_token }}\
           pytest e2etest.py
