@@ -71,7 +71,7 @@ env:
   ARTIFACT_PATH: "test-results/" # arbitrary folder name to download test-results to for organizational purposes
   BEE_NAME: '${{ inputs.bee-name }}'
   BILLING_PROJECT_NAME: '${{ inputs.billing-project-name }}' # github token for access to kick off a job in the private repo
-  AZURE_TOKEN: '${{ secrets.user-access-token }}' # github token for access to kick off a job in the private repo
+  #AZURE_TOKEN: '${{ secrets.user-access-token }}' # github token for access to kick off a job in the private repo
 
 jobs:
   init-github-context:

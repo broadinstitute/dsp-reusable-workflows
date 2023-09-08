@@ -2,11 +2,11 @@
 from helper import *
 
 # Setup configuration
-azure_token = ""
-bee_name = ""; # add bee name here
-billing_project_name = ""; # add billing account name here
-number_of_workspaces = 1;
-cbas=False;
+azure_token = os.environ.get("AZURE_TOKEN")
+bee_name = os.environ.get("BEE_NAME") # add bee name here
+billing_project_name = os.environ.get("BILLING_PROJECT_NAME") # add billing account name her
+number_of_workspaces = 1
+cbas=False
 wds_upload=True
 cbas_submit_workflow=False
 number_of_workflow_to_kick_off = 0
