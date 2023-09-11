@@ -36,12 +36,16 @@ def create_workspace(cbas, billing_project_name, header):
       "namespace": billing_project_name, # Billing project name
       "name": f"api-workspace-{''.join(random.choices(string.ascii_lowercase, k=5))}", # workspace name
       "attributes": {}};
-    
+    print(request_body)
+
     response = requests.post(url=api_call2, json=request_body, headers=header)
+    print(response)
+
     
     #example json that is returned by request: 'attributes': {}, 'authorizationDomain': [], 'bucketName': '', 'createdBy': 'yulialovesterra@gmail.com', 'createdDate': '2023-08-03T20:10:59.116Z', 'googleProject': '', 'isLocked': False, 'lastModified': '2023-08-03T20:10:59.116Z', 'name': 'api-workspace-1', 'namespace': 'yuliadub-test2', 'workspaceId': 'ac466322-2325-4f57-895d-fdd6c3f8c7ad', 'workspaceType': 'mc', 'workspaceVersion': 'v2'}
     json2 = response.json()
     print(json2)
+    print("debug json2")
     data = json.loads(json.dumps(json2))
     
     print(data['workspaceId'])
