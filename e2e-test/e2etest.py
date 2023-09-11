@@ -1,25 +1,33 @@
 
 from helper import *
+import os
 
 # Setup configuration
+# These values should be injected into the environment before setup
 azure_token = os.environ.get("AZURE_TOKEN")
-bee_name = os.environ.get("BEE_NAME") # add bee name here
-billing_project_name = os.environ.get("BILLING_PROJECT_NAME") # add billing account name her
-number_of_workspaces = 1
-cbas=False
+bee_name = os.environ.get("BEE_NAME")
+billing_project_name = os.environ.get("BILLING_PROJECT_NAME")
+# azure_token = ""
+# bee_name = ""; # add bee name here
+# billing_project_name = ""; # add billing account name here
+#TODO: These could be arguments to running the test
+number_of_workspaces = 1;
+cbas=False;
 wds_upload=True
 cbas_submit_workflow=False
 number_of_workflow_to_kick_off = 0
 
 
-setup(bee_name)
-
+workspace_manager_url, rawls_url, leo_url = setup(bee_name)
+print("AZURE_TOKEN: ", azure_token)
+print("BEE_NAME: ", bee_name)
+print("BILLING_PROJECT_NAME: ", billing_project_name)
  # WHERE E2E test actually begins
 api_call1 = f"{workspace_manager_url}/api/workspaces/v1";
-header = {"Authorization": azure_token};
-
-#response = requests.get(url=api_call1, headers=header)
-#print(response.json())
+header = {"Authorization": "Bearer " + azure_token};
+print("HEADER: ", header)
+response = requests.get(url=api_call1, headers=header)
+print(response)
 
 workspaceIds = []
 
@@ -48,10 +56,10 @@ if wds_upload:
             continue
         upload_wds_data(wds_url, workspace, "resources/test.tsv", "test", azure_token)
 
-        if cbas_submit_workflow:
-		    # next trigger a workflow in each of the workspaces, at this time this doesnt monitor if this was succesful or not
-		    # upload file needed for workflow to run
-            upload_wds_data(wds_url, workspace, "resources/sraloadtest.tsv", "sraloadtest", azure_token)
-            submit_workflow_assemble_refbased(workspace, "resources/assemble_refbased.json", azure_token)
+if cbas_submit_workflow:
+    # next trigger a workflow in each of the workspaces, at this time this doesnt monitor if this was succesful or not
+    # upload file needed for workflow to run
+    upload_wds_data(wds_url, workspace, "resources/sraloadtest.tsv", "sraloadtest", azure_token)
+    submit_workflow_assemble_refbased(workspace, "resources/assemble_refbased.json", azure_token)
 
 print("LOAD TEST COMPLETE.")

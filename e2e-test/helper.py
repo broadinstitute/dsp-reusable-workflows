@@ -19,10 +19,14 @@ def setup(bee_name):
 # define major service endpoints based on bee name
     global workspace_manager_url
     workspace_manager_url = f"https://workspace.{bee_name}.bee.envs-terra.bio"
+    print("workspace_manager_url: ", workspace_manager_url)
     global rawls_url
     rawls_url = f"https://rawls.{bee_name}.bee.envs-terra.bio"
+    print("rawls_url: ", rawls_url)
     global leo_url
     leo_url = f"https://leonardo.{bee_name}.bee.envs-terra.bio"
+    print("leo_url: ", leo_url)
+    return workspace_manager_url, rawls_url, leo_url
 
 # CREATE WORKSPACE ACTION
 def create_workspace(cbas, billing_project_name, header):
@@ -60,11 +64,12 @@ def create_workspace(cbas, billing_project_name, header):
 def get_app_url(workspaceId, app, azure_token):
     """"Get url for wds/cbas."""
     uri = f"{leo_url}/api/apps/v2/{workspaceId}?includeDeleted=false"
-
-    headers = {"Authorization": azure_token,
+    print(uri)
+    headers = {"Authorization": "Bearer " + azure_token,
                "accept": "application/json"}
 
     response = requests.get(uri, headers=headers)
+    print(response)
     status_code = response.status_code
 
     if status_code != 200:
@@ -95,13 +100,13 @@ def get_app_url(workspaceId, app, azure_token):
 # UPLOAD DATA TO WORSPACE DATA SERVICE IN A WORKSPACE
 def upload_wds_data(wds_url, current_workspaceId, tsv_file_name, recordName, azure_token):
     version="v0.2"
-    api_client = wds_client.ApiClient(header_name='Authorization', header_value=azure_token)
+    api_client = wds_client.ApiClient(header_name='Authorization', header_value="Bearer " + azure_token)
     api_client.configuration.host = wds_url
     
     # records client is used to interact with Records in the data table
     records_client = wds_client.RecordsApi(api_client)
     # data to upload to wds table
-    
+    print("uploading to wds")
     # Upload entity to workspace data table with name "testType_uploaded"
     response = records_client.upload_tsv(current_workspaceId, version, recordName, tsv_file_name)
     print(response)
