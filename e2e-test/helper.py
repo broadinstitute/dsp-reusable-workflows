@@ -1,9 +1,5 @@
 
-import sys
-import os
 import json
-import requests
-import io
 import uuid
 import random
 import string
@@ -63,7 +59,7 @@ def create_workspace(cbas, billing_project_name, header):
         # will return 202 or error
         print(response)
 
-    return data['workspaceId']
+    return data['workspaceId'], data['name']
 
 # GET WDS OR CROMWELL ENDPOINT URL FROM LEO
 def get_app_url(workspaceId, app, azure_token):
@@ -73,36 +69,34 @@ def get_app_url(workspaceId, app, azure_token):
     headers = {"Authorization": "Bearer " + azure_token,
                "accept": "application/json"}
 
-    response = requests.get(uri, headers=headers)
-    print(response)
-    status_code = response.status_code
-
-    if status_code != 200:
-        return response.text
-    print(f"Successfully retrieved details.")
-    response = json.loads(response.text)
-    print(response)
-
-    app_url = ""
-
     app_type = "CROMWELL" if app != 'wds' else app.upper();
     print(f"App type: {app_type}")
-    for entries in response: 
-        if entries['appType'] == app_type and entries['proxyUrls'][app] is not None:
-            print(entries['status'])
-            if(entries['status'] == "PROVISIONING"):
-                print(f"{app} is still provisioning")
-                break
-            print(f"App status: {entries['status']}")
-            app_url = entries['proxyUrls'][app]
-            break 
 
-    if app_url is None: 
-        print(f"{app} is missing in current workspace")
-    else:
-        print(f"{app} url: {app_url}")
+    #TODO: can this get into an infinite loop?
+    while True:
+        response = requests.get(uri, headers=headers)
+        print(response)
+        status_code = response.status_code
 
-    return app_url
+        if status_code != 200:
+            print(f"Error fetching apps from leo: ${response.text}")
+            return ""
+        print(f"Successfully retrieved details.")
+        response = json.loads(response.text)
+        print(response)
+
+        #TODO have i covered all cases?
+        for entries in response:
+            if entries['appType'] == app_type and entries['proxyUrls'][app] is not None:
+                print(entries['status'])
+                if(entries['status'] == "PROVISIONING"):
+                    print(f"{app} is still provisioning")
+                    time.sleep(30)
+                elif entries['status'] == 'ERROR':
+                    print(f"{app} is in ERROR state. Quitting.")
+                    return ""
+                else:
+                    return entries['proxyUrls'][app]
 
 # UPLOAD DATA TO WORSPACE DATA SERVICE IN A WORKSPACE
 def upload_wds_data(wds_url, current_workspaceId, tsv_file_name, recordName, azure_token):
@@ -136,6 +130,33 @@ def submit_workflow_assemble_refbased(workspaceId, dataFile, azure_token):
     response = requests.post(uri, data=request_body2, headers=headers)
     # example of what it returns: {'run_set_id': 'cdcdc570-f6f3-4425-9404-4d70cd74ce2a', 'runs': [{'run_id': '0a72f308-4931-436b-bbfe-55856f7c1a39', 'state': 'UNKNOWN', 'errors': 'null'}, {'run_id': 'eb400221-efd7-4e1a-90c9-952f32a10b60', 'state': 'UNKNOWN', 'errors': 'null'}], 'state': 'RUNNING'}
     print(response.json())
+
+def clone_workspace(billing_project_name, workspace_name, header):
+    api_call2 = f"{rawls_url}/api/workspaces/{billing_project_name}/{workspace_name}/clone";
+    request_body = {
+        "namespace": billing_project_name,  # Billing project name
+        "name": f"{workspace_name} clone-{''.join(random.choices(string.ascii_lowercase, k=3))}",  # workspace name
+        "attributes": {}};
+
+    print(f"cloning workspace {workspace_name}")
+    response = requests.post(url=api_call2, json=request_body, headers=header)
+
+    # example json that is returned by request: 'attributes': {}, 'authorizationDomain': [], 'bucketName': '', 'createdBy': 'yulialovesterra@gmail.com', 'createdDate': '2023-08-03T20:10:59.116Z', 'googleProject': '', 'isLocked': False, 'lastModified': '2023-08-03T20:10:59.116Z', 'name': 'api-workspace-1', 'namespace': 'yuliadub-test2', 'workspaceId': 'ac466322-2325-4f57-895d-fdd6c3f8c7ad', 'workspaceType': 'mc', 'workspaceVersion': 'v2'}
+    json2 = response.json()
+    print(json2)
+    return json2["workspaceId"]
+
+def check_wds_data(wds_url, workspaceId, recordName, azure_token):
+    version = "v0.2"
+    api_client = wds_client.ApiClient(header_name='Authorization', header_value="Bearer " + azure_token)
+    api_client.configuration.host = wds_url
+
+    schema_client = wds_client.SchemaApi(api_client)
+
+    print("verifying data was cloned")
+    response = schema_client.describe_record_type(workspaceId, version, recordName);
+    assert response.name == recordName, "Name does not match"
+    assert response.count == 2504, "Count does not match"
 
 
 def delete_workspace():
