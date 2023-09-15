@@ -81,8 +81,10 @@ def get_app_url(workspaceId, app, azure_token):
         return response.text
     print(f"Successfully retrieved details.")
     response = json.loads(response.text)
+    print(response)
 
     app_url = ""
+
     app_type = "CROMWELL" if app != 'wds' else app.upper();
     print(f"App type: {app_type}")
     for entries in response: 
