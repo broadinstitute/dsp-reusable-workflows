@@ -9,47 +9,6 @@ on:
         required: true
         default: 'main'
         type: string
-#      delete-bee:
-#        description: 'Delete created bee after running tests'
-#        required: true
-#        default: true
-#        type: boolean
-        #TODO: what subjects do we need
-#      owner-subject:
-#        description: 'Owner subject (used for creating billing project in E2E testing)'
-#        required: true
-#        default: 'hermione.owner@quality.firecloud.org'
-#        type: string
-#      student-subjects:
-#        description: 'A JSON array of Student subjects used for E2E testing'
-#        required: true
-#        default: '["harry.potter@quality.firecloud.org","ron.weasley@quality.firecloud.org"]'
-#        type: string
-#      service-account:
-#        description: 'Email address or unique identifier of the Google Cloud service account for which to generate credentials'
-#        required: true
-#        default: 'firecloud-qa@broad-dsde-qa.iam.gserviceaccount.com'
-#        type: string
-#      tenant-id:
-#        description: 'Azure tenant ID. Set the default tenant ID to match your App deployment on Azure'
-#        required: true
-#        default: 'fad90753-2022-4456-9b0a-c7e5b934e408'
-#        type: string
-#      subscription-id:
-#        description: 'Azure subscription ID. Set the default subscription ID to match your App deployment on Azure'
-#        required: false
-#        default: 'f557c728-871d-408c-a28b-eb6b2141a087'
-#        type: string
-#      mrg-id:
-#        description: 'Azure Managed Resource Group name. Set the default MRG to match your App deployment on Azure'
-#        required: true
-#        default: 'staticTestingMrg'
-#        type: string
-#      landing-zone-id:
-#        description: 'Landing Zone ID. Set the LZID to match your App deployment on Azure'
-#        required: true
-#        default: 'f41c1a97-179b-4a18-9615-5214d79ba600'
-#        type: string
       bee-name:
         description: 'bee name'
         required: true
@@ -58,12 +17,6 @@ on:
         description: 'name of billing project'
         required: true
         type: string
-
-#    secrets:
-#      user-access-token:
-#        required: true
-#        description: "user bearer access token for terra api access"
-
 
 env:
   CHECKOUT_PATH: "dsp-reusable-workflows/" # arbitrary folder name to checkout to for organizational purposes
@@ -76,8 +29,6 @@ env:
 jobs:
   init-github-context:
     runs-on: ubuntu-latest
-#    outputs:
-#      branch: ${{ steps.extract-inputs.outputs.branch }}
     steps:
       - name: Get inputs or use defaults
         id: extract-inputs
@@ -124,4 +75,4 @@ jobs:
           ls
           which pytest
           AZURE_TOKEN=${{ steps.obtain-token.outputs.access_token }}\
-            python e2etest.py #experiment
+            pytest e2etest.py
