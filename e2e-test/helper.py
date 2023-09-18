@@ -18,13 +18,13 @@ def setup(bee_name):
 # define major service endpoints based on bee name
     global workspace_manager_url
     workspace_manager_url = f"https://workspace.{bee_name}.bee.envs-terra.bio"
-    logging.debug("workspace_manager_url: ", workspace_manager_url)
+    logging.debug(f"workspace_manager_url: {workspace_manager_url}")
     global rawls_url
     rawls_url = f"https://rawls.{bee_name}.bee.envs-terra.bio"
-    logging.debug("rawls_url: ", rawls_url)
+    logging.debug(f"rawls_url: {rawls_url}")
     global leo_url
     leo_url = f"https://leonardo.{bee_name}.bee.envs-terra.bio"
-    logging.debug("leo_url: ", leo_url)
+    logging.debug(f"leo_url: {leo_url}")
     return workspace_manager_url, rawls_url, leo_url
 
 # CREATE WORKSPACE ACTION
@@ -37,17 +37,17 @@ def create_workspace(cbas, billing_project_name, header):
       "attributes": {}};
 
     response = requests.post(url=api_call2, json=request_body, headers=header)
-    logging.debug("url: ", api_call2)
-    logging.debug("headers: ", header)
-    logging.debug("response: ", response)
-    logging.debug("request_body: ", request_body)
+    logging.debug(f"url: {api_call2}")
+    logging.debug(f"headers: {header}")
+    logging.debug(f"response: {response}")
+    logging.debug(f"request_body: {request_body}")
     
     #example json that is returned by request: 'attributes': {}, 'authorizationDomain': [], 'bucketName': '', 'createdBy': 'yulialovesterra@gmail.com', 'createdDate': '2023-08-03T20:10:59.116Z', 'googleProject': '', 'isLocked': False, 'lastModified': '2023-08-03T20:10:59.116Z', 'name': 'api-workspace-1', 'namespace': 'yuliadub-test2', 'workspaceId': 'ac466322-2325-4f57-895d-fdd6c3f8c7ad', 'workspaceType': 'mc', 'workspaceVersion': 'v2'}
     json2 = response.json()
-    logging.debug("json response: ", json2)
+    logging.debug(f"json response: {json2}")
     data = json.loads(json.dumps(json2))
     
-    logging.debug("data['workspaceId']: ", data['workspaceId'])
+    logging.debug(f"data['workspaceId']:  {data['workspaceId']}")
     
     # enable CBAS if specified
     if cbas is True:
