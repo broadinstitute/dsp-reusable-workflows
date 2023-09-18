@@ -6,6 +6,9 @@ import string
 import wds_client
 import requests
 import time
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
 
 workspace_manager_url = ""
 rawls_url = ""
@@ -15,13 +18,13 @@ def setup(bee_name):
 # define major service endpoints based on bee name
     global workspace_manager_url
     workspace_manager_url = f"https://workspace.{bee_name}.bee.envs-terra.bio"
-    print("workspace_manager_url: ", workspace_manager_url)
+    logging.debug("workspace_manager_url: ", workspace_manager_url)
     global rawls_url
     rawls_url = f"https://rawls.{bee_name}.bee.envs-terra.bio"
-    print("rawls_url: ", rawls_url)
+    logging.debug("rawls_url: ", rawls_url)
     global leo_url
     leo_url = f"https://leonardo.{bee_name}.bee.envs-terra.bio"
-    print("leo_url: ", leo_url)
+    logging.debug("leo_url: ", leo_url)
     return workspace_manager_url, rawls_url, leo_url
 
 # CREATE WORKSPACE ACTION
@@ -34,22 +37,21 @@ def create_workspace(cbas, billing_project_name, header):
       "attributes": {}};
 
     response = requests.post(url=api_call2, json=request_body, headers=header)
-    print("url: ", api_call2)
-    print("headers: ", header)
-    print("response: ", response)
-    print("request_body: ", request_body)
-
+    logging.debug("url: ", api_call2)
+    logging.debug("headers: ", header)
+    logging.debug("response: ", response)
+    logging.debug("request_body: ", request_body)
     
     #example json that is returned by request: 'attributes': {}, 'authorizationDomain': [], 'bucketName': '', 'createdBy': 'yulialovesterra@gmail.com', 'createdDate': '2023-08-03T20:10:59.116Z', 'googleProject': '', 'isLocked': False, 'lastModified': '2023-08-03T20:10:59.116Z', 'name': 'api-workspace-1', 'namespace': 'yuliadub-test2', 'workspaceId': 'ac466322-2325-4f57-895d-fdd6c3f8c7ad', 'workspaceType': 'mc', 'workspaceVersion': 'v2'}
     json2 = response.json()
-    print("json response: ", json2)
+    logging.debug("json response: ", json2)
     data = json.loads(json.dumps(json2))
     
-    print("data['workspaceId']: ", data['workspaceId'])
+    logging.debug("data['workspaceId']: ", data['workspaceId'])
     
     # enable CBAS if specified
     if cbas is True:
-        print(f"Enabling CBAS for workspace {data['workspaceId']}")
+        logging.info(f"Enabling CBAS for workspace {data['workspaceId']}")
         api_call3 = f"{leo_url}/api/apps/v2/{data['workspaceId']}/terra-app-{str(uuid.uuid4())}";
         request_body2 = {
           "appType": "CROMWELL"
@@ -57,7 +59,7 @@ def create_workspace(cbas, billing_project_name, header):
         
         response = requests.post(url=api_call3, json=request_body2, headers=header)
         # will return 202 or error
-        print(response)
+        logging.debug(response)
 
     return data['workspaceId'], data['name']
 
@@ -65,35 +67,34 @@ def create_workspace(cbas, billing_project_name, header):
 def get_app_url(workspaceId, app, azure_token):
     """"Get url for wds/cbas."""
     uri = f"{leo_url}/api/apps/v2/{workspaceId}?includeDeleted=false"
-    print(uri)
     headers = {"Authorization": "Bearer " + azure_token,
                "accept": "application/json"}
 
     app_type = "CROMWELL" if app != 'wds' else app.upper();
-    print(f"App type: {app_type}")
+    logging.info(f"App type: {app_type}")
 
     #TODO: can this get into an infinite loop?
     while True:
         response = requests.get(uri, headers=headers)
-        print(response)
+        logging.debug(response)
         status_code = response.status_code
 
         if status_code != 200:
-            print(f"Error fetching apps from leo: ${response.text}")
+            logging.error(f"Error fetching apps from leo: ${response.text}")
             return ""
-        print(f"Successfully retrieved details.")
+        logging.info(f"Successfully retrieved details.")
         response = json.loads(response.text)
-        print(response)
+        logging.debug(response)
 
         #TODO have i covered all cases?
         for entries in response:
             if entries['appType'] == app_type and entries['proxyUrls'][app] is not None:
-                print(entries['status'])
+                logging.debug(entries['status'])
                 if(entries['status'] == "PROVISIONING"):
-                    print(f"{app} is still provisioning")
+                    logging.info(f"{app} is still provisioning")
                     time.sleep(30)
                 elif entries['status'] == 'ERROR':
-                    print(f"{app} is in ERROR state. Quitting.")
+                    logging.error(f"{app} is in ERROR state. Quitting.")
                     return ""
                 else:
                     return entries['proxyUrls'][app]
@@ -107,15 +108,15 @@ def upload_wds_data(wds_url, current_workspaceId, tsv_file_name, recordName, azu
     # records client is used to interact with Records in the data table
     records_client = wds_client.RecordsApi(api_client)
     # data to upload to wds table
-    print("uploading to wds")
+    logging.info("uploading to wds")
     # Upload entity to workspace data table with name "testType_uploaded"
     response = records_client.upload_tsv(current_workspaceId, version, recordName, tsv_file_name)
-    print(response)
+    logging.debug(response)
 
 # KICK OFF A WORKFLOW INSIDE A WORKSPACE
 def submit_workflow_assemble_refbased(workspaceId, dataFile, azure_token):
     cbas_url = get_app_url(workspaceId, "cbas", azure_token)
-    print(cbas_url)
+    logging.debug(cbas_url)
     #open text file in read mode
     text_file = open(dataFile, "r")
     request_body2 = text_file.read();
@@ -129,7 +130,7 @@ def submit_workflow_assemble_refbased(workspaceId, dataFile, azure_token):
     
     response = requests.post(uri, data=request_body2, headers=headers)
     # example of what it returns: {'run_set_id': 'cdcdc570-f6f3-4425-9404-4d70cd74ce2a', 'runs': [{'run_id': '0a72f308-4931-436b-bbfe-55856f7c1a39', 'state': 'UNKNOWN', 'errors': 'null'}, {'run_id': 'eb400221-efd7-4e1a-90c9-952f32a10b60', 'state': 'UNKNOWN', 'errors': 'null'}], 'state': 'RUNNING'}
-    print(response.json())
+    logging.debug(response.json())
 
 def clone_workspace(billing_project_name, workspace_name, header):
     api_call2 = f"{rawls_url}/api/workspaces/{billing_project_name}/{workspace_name}/clone";
@@ -138,12 +139,12 @@ def clone_workspace(billing_project_name, workspace_name, header):
         "name": f"{workspace_name} clone-{''.join(random.choices(string.ascii_lowercase, k=3))}",  # workspace name
         "attributes": {}};
 
-    print(f"cloning workspace {workspace_name}")
+    logging.info(f"cloning workspace {workspace_name}")
     response = requests.post(url=api_call2, json=request_body, headers=header)
 
     # example json that is returned by request: 'attributes': {}, 'authorizationDomain': [], 'bucketName': '', 'createdBy': 'yulialovesterra@gmail.com', 'createdDate': '2023-08-03T20:10:59.116Z', 'googleProject': '', 'isLocked': False, 'lastModified': '2023-08-03T20:10:59.116Z', 'name': 'api-workspace-1', 'namespace': 'yuliadub-test2', 'workspaceId': 'ac466322-2325-4f57-895d-fdd6c3f8c7ad', 'workspaceType': 'mc', 'workspaceVersion': 'v2'}
     json2 = response.json()
-    print(json2)
+    logging.debug(json2)
     return json2["workspaceId"]
 
 def check_wds_data(wds_url, workspaceId, recordName, azure_token):
@@ -153,7 +154,7 @@ def check_wds_data(wds_url, workspaceId, recordName, azure_token):
 
     schema_client = wds_client.SchemaApi(api_client)
 
-    print("verifying data was cloned")
+    logging.info("verifying data was cloned")
     response = schema_client.describe_record_type(workspaceId, version, recordName);
     assert response.name == recordName, "Name does not match"
     assert response.count == 2504, "Count does not match"

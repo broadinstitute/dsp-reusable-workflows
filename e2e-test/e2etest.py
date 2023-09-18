@@ -15,13 +15,8 @@ test_cloning=False
 
 def run_workspace_app_test(cbas, wds_upload, cbas_submit_workflow, test_cloning):
 
-    workspace_manager_url, rawls_url, leo_url = setup(bee_name)
-    print("AZURE_TOKEN: ", azure_token)
-    print("BEE_NAME: ", bee_name)
-    print("BILLING_PROJECT_NAME: ", billing_project_name)
-     # WHERE E2E test actually begins
+    setup(bee_name)
     header = {"Authorization": "Bearer " + azure_token};
-    print("HEADER: ", header)
 
     # create the workspace
     workspace_id, workspace_name = create_workspace(cbas, billing_project_name, header)
@@ -36,10 +31,10 @@ def run_workspace_app_test(cbas, wds_upload, cbas_submit_workflow, test_cloning)
         print("TEST COMPLETE.")
 
     if wds_upload:
-        print(f"trying to see wds is ready to upload stuff for workspace {workspace_id}")
+        logging.info(f"trying to see wds is ready to upload stuff for workspace {workspace_id}")
         wds_url = get_app_url(workspace_id, "wds", azure_token)
         if wds_url == "":
-            print(f"wds errored out for workspace {workspace_id}")
+            logging.error(f"wds errored out for workspace {workspace_id}")
         else:
             upload_wds_data(wds_url, workspace_id, "resources/test.tsv", "test", azure_token)
 
@@ -58,7 +53,8 @@ def run_workspace_app_test(cbas, wds_upload, cbas_submit_workflow, test_cloning)
 
 
 #Run create-wds-test
-run_workspace_app_test(cbas,wds_upload,cbas_submit_workflow,test_cloning)
+# run_workspace_app_test(cbas,wds_upload,cbas_submit_workflow,test_cloning)
 
+#TODO: Do we need separate runs or is just this one enough?
 #Run clone-wds-test
-# run_workspace_app_test(cbas,wds_upload,cbas_submit_workflow,True)
+run_workspace_app_test(cbas,wds_upload,cbas_submit_workflow,True)
