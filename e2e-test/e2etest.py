@@ -1,3 +1,4 @@
+import logging
 
 from helper import *
 import os
@@ -24,8 +25,10 @@ def run_workspace_app_test(cbas, wds_upload, cbas_submit_workflow, test_cloning)
     # track to see when the workspace WDS is ready to upload data into them
     # sleep for 5 minutes to allow WDS to start up, if no wds, only sleep 2 minutes to let cbas start up
     if wds_upload:
+        logging.info("Sleeping for 200 seconds while WDS starts up")
         time.sleep(200)
     elif cbas_submit_workflow:
+        logging.info("Sleeping for 120 seconds while cbas starts up")
         time.sleep(120)
     else:
         print("TEST COMPLETE.")
