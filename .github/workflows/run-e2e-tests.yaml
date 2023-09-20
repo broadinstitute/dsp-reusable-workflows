@@ -26,17 +26,8 @@ env:
   BILLING_PROJECT_NAME: '${{ inputs.billing-project-name }}' # github token for access to kick off a job in the private repo
 
 jobs:
-#   init-github-context:
-#     runs-on: ubuntu-latest
-#     steps:
-#       - name: Get inputs or use defaults
-#         id: extract-inputs
-#         run: |
-# #          echo "owner-subject=${{ inputs.owner-subject              || 'hermione.owner@quality.firecloud.org' }}" >> "$GITHUB_OUTPUT"
-
   run-e2e-test-job:
     runs-on: ubuntu-latest
-    # needs: [init-github-context] #, create-bee-workflow, params-gen, attach-landing-zone-to-bee-workflow]
     steps:
 
       - name: "Checkout dsp-reusable-workflows"
@@ -55,7 +46,6 @@ jobs:
         run: |
           cd ${{ env.CHECKOUT_PATH }}${{ env.SCRIPT_PATH }}
           pip install -r requirements.txt
-          pip install pytest
 
       - name: 'Obtain OAuth2 2.0 Access Token'
         id: 'obtain-token'
