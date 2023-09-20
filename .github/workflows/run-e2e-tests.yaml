@@ -72,4 +72,4 @@ jobs:
         run: |
           cd ${{ env.CHECKOUT_PATH }}${{ env.SCRIPT_PATH }}
           AZURE_TOKEN=${{ steps.obtain-token.outputs.access_token }}\
-            pythib e2etest.py
+            python e2etest.py
