@@ -41,7 +41,7 @@ def create_workspace(cbas, billing_project_name, header):
     logging.debug(f"headers: {header}")
     logging.debug(f"response: {workpace_response}")
     logging.debug(f"request_body: {request_body}")
-    assert workpace_response.status_code == 200, f"Error creating workspace: ${workpace_response.text}"
+    assert workpace_response.status_code == 201, f"Error creating workspace: ${workpace_response.text}"
     
     #example json that is returned by request: 'attributes': {}, 'authorizationDomain': [], 'bucketName': '', 'createdBy': 'yulialovesterra@gmail.com', 'createdDate': '2023-08-03T20:10:59.116Z', 'googleProject': '', 'isLocked': False, 'lastModified': '2023-08-03T20:10:59.116Z', 'name': 'api-workspace-1', 'namespace': 'yuliadub-test2', 'workspaceId': 'ac466322-2325-4f57-895d-fdd6c3f8c7ad', 'workspaceType': 'mc', 'workspaceVersion': 'v2'}
     workspace_response_json = workpace_response.json()
@@ -141,7 +141,7 @@ def clone_workspace(billing_project_name, workspace_name, header):
 
     logging.info(f"cloning workspace {workspace_name}")
     response = requests.post(url=clone_workspace_api, json=request_body, headers=header)
-    assert response.status_code == 200, f"Cloning {workspace_name} failed: {response.reason}"
+    assert response.status_code == 201, f"Cloning {workspace_name} failed: {response.reason}"
     # example json that is returned by request: 'attributes': {}, 'authorizationDomain': [], 'bucketName': '', 'createdBy': 'yulialovesterra@gmail.com', 'createdDate': '2023-08-03T20:10:59.116Z', 'googleProject': '', 'isLocked': False, 'lastModified': '2023-08-03T20:10:59.116Z', 'name': 'api-workspace-1', 'namespace': 'yuliadub-test2', 'workspaceId': 'ac466322-2325-4f57-895d-fdd6c3f8c7ad', 'workspaceType': 'mc', 'workspaceVersion': 'v2'}
     clone_response_json = response.json()
     logging.debug(clone_response_json)
