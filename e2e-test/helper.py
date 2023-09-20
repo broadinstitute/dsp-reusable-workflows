@@ -98,7 +98,10 @@ def poll_for_app_url(workspaceId, app, azure_token):
 
         #TODO have i covered all cases?
         for entries in response:
-            if entries['appType'] == app_type and entries['proxyUrls'][app] is not None:
+            if entries['appType'] == app_type and app not in entries['proxyUrls']:
+                logging.error(f"{app} not found in proxyUrls: {entries}")
+                return ""
+            elif entries['appType'] == app_type and entries['proxyUrls'][app] is not None:
                 logging.debug(entries['status'])
                 if(entries['status'] == "PROVISIONING"):
                     logging.info(f"{app} is still provisioning")
