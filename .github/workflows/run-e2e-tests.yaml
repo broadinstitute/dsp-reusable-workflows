@@ -71,7 +71,5 @@ jobs:
       - name: Run test
         run: |
           cd ${{ env.CHECKOUT_PATH }}${{ env.SCRIPT_PATH }}
-          # ls
-          # which pytest
           AZURE_TOKEN=${{ steps.obtain-token.outputs.access_token }}\
-            pytest e2etest.py
+            pythib e2etest.py
