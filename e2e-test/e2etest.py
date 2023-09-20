@@ -1,5 +1,3 @@
-import logging
-
 from helper import *
 import os
 
@@ -23,19 +21,16 @@ def run_workspace_app_test(cbas, wds_upload, cbas_submit_workflow, test_cloning)
     workspace_id, workspace_name = create_workspace(cbas, billing_project_name, header)
 
     # track to see when the workspace WDS is ready to upload data into them
-    # sleep for 5 minutes to allow WDS to start up, if no wds, only sleep 2 minutes to let cbas start up
-    if wds_upload:
-        logging.info("Sleeping for 200 seconds while WDS starts up")
-        time.sleep(200)
-    elif cbas_submit_workflow:
-        logging.info("Sleeping for 120 seconds while cbas starts up")
-        time.sleep(120)
+    # sleep for 1 minute to allow apps to start up
+    if wds_upload or cbas_submit_workflow:
+        logging.info("Sleeping for 60 seconds while apps starts up")
+        time.sleep(60)
     else:
         print("TEST COMPLETE.")
 
     if wds_upload:
         logging.info(f"trying to see wds is ready to upload stuff for workspace {workspace_id}")
-        wds_url = get_app_url(workspace_id, "wds", azure_token)
+        wds_url = poll_for_app_url(workspace_id, "wds", azure_token)
         if wds_url == "":
             logging.error(f"wds errored out for workspace {workspace_id}")
         else:
@@ -49,7 +44,7 @@ def run_workspace_app_test(cbas, wds_upload, cbas_submit_workflow, test_cloning)
 
     if test_cloning:
         clone_id = clone_workspace(billing_project_name, workspace_name, header)
-        wds_url = get_app_url(clone_id, "wds", azure_token)
+        wds_url = poll_for_app_url(clone_id, "wds", azure_token)
         check_wds_data(wds_url, clone_id, "test", azure_token)
 
     print("TEST COMPLETE.")

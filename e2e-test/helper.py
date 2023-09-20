@@ -28,22 +28,36 @@ def setup(bee_name):
     return workspace_manager_url, rawls_url, leo_url
 
 # CREATE WORKSPACE ACTION
-def create_workspace(cbas, billing_project_name, header):
+def create_workspace(cbas, billing_project_name, header, workspace_name = ""):
     # create a new workspace, need to have attributes or api call doesnt work
     rawls_workspace_api = f"{rawls_url}/api/workspaces";
     request_body= {
       "namespace": billing_project_name, # Billing project name
-      "name": f"api-workspace-{''.join(random.choices(string.ascii_lowercase, k=5))}", # workspace name
+      "name": workspace_name if workspace_name else f"api-workspace-{''.join(random.choices(string.ascii_lowercase, k=5))}",
       "attributes": {}};
 
     workpace_response = requests.post(url=rawls_workspace_api, json=request_body, headers=header)
     logging.debug(f"url: {rawls_workspace_api}")
-    logging.debug(f"headers: {header}")
     logging.debug(f"response: {workpace_response}")
     logging.debug(f"request_body: {request_body}")
     assert workpace_response.status_code == 201, f"Error creating workspace: ${workpace_response.text}"
     
-    #example json that is returned by request: 'attributes': {}, 'authorizationDomain': [], 'bucketName': '', 'createdBy': 'yulialovesterra@gmail.com', 'createdDate': '2023-08-03T20:10:59.116Z', 'googleProject': '', 'isLocked': False, 'lastModified': '2023-08-03T20:10:59.116Z', 'name': 'api-workspace-1', 'namespace': 'yuliadub-test2', 'workspaceId': 'ac466322-2325-4f57-895d-fdd6c3f8c7ad', 'workspaceType': 'mc', 'workspaceVersion': 'v2'}
+    # example json that is returned by request:
+    # {
+    #   "attributes": {},
+    #   "authorizationDomain": [],
+    #   "bucketName": "",
+    #   "createdBy": "yulialovesterra@gmail.com",
+    #   "createdDate": "2023-08-03T20:10:59.116Z",
+    #   "googleProject": "",
+    #   "isLocked": False,
+    #   "lastModified": "2023-08-03T20:10:59.116Z",
+    #   "name": "api-workspace-1",
+    #   "namespace": "yuliadub-test2",
+    #   "workspaceId": "ac466322-2325-4f57-895d-fdd6c3f8c7ad",
+    #   "workspaceType": "mc",
+    #   "workspaceVersion": "v2"
+    # }
     workspace_response_json = workpace_response.json()
     logging.debug(f"json response: {workspace_response_json}")
     data = json.loads(json.dumps(workspace_response_json))
@@ -65,7 +79,7 @@ def create_workspace(cbas, billing_project_name, header):
     return data['workspaceId'], data['name']
 
 # GET WDS OR CROMWELL ENDPOINT URL FROM LEO
-def get_app_url(workspaceId, app, azure_token):
+def poll_for_app_url(workspaceId, app, azure_token):
     """"Get url for wds/cbas."""
     leo_get_app_api = f"{leo_url}/api/apps/v2/{workspaceId}?includeDeleted=false"
     headers = {"Authorization": "Bearer " + azure_token,
@@ -77,8 +91,6 @@ def get_app_url(workspaceId, app, azure_token):
     #TODO: can this get into an infinite loop?
     while True:
         response = requests.get(leo_get_app_api, headers=headers)
-        logging.debug(response)
-
         assert response.status_code == 200, f"Error fetching apps from leo: ${response.text}"
         logging.info(f"Successfully retrieved details.")
         response = json.loads(response.text)
@@ -110,12 +122,12 @@ def upload_wds_data(wds_url, current_workspaceId, tsv_file_name, recordName, azu
     # Upload entity to workspace data table with name "testType_uploaded"
     response = records_client.upload_tsv(current_workspaceId, version, recordName, tsv_file_name)
     logging.debug(response)
-    assert response.status_code == 200, f"Uploading to wds failed: {response.reason}"
+    assert response.records_modified == 2504, f"Uploading to wds failed: {response.reason}"
 
 
 # KICK OFF A WORKFLOW INSIDE A WORKSPACE
 def submit_workflow_assemble_refbased(workspaceId, dataFile, azure_token):
-    cbas_url = get_app_url(workspaceId, "cbas", azure_token)
+    cbas_url = poll_for_app_url(workspaceId, "cbas", azure_token)
     logging.debug(cbas_url)
     #open text file in read mode
     text_file = open(dataFile, "r")
@@ -129,7 +141,23 @@ def submit_workflow_assemble_refbased(workspaceId, dataFile, azure_token):
               "Content-Type": "application/json"}
     
     response = requests.post(cbas_run_sets_api, data=request_body, headers=headers)
-    # example of what it returns: {'run_set_id': 'cdcdc570-f6f3-4425-9404-4d70cd74ce2a', 'runs': [{'run_id': '0a72f308-4931-436b-bbfe-55856f7c1a39', 'state': 'UNKNOWN', 'errors': 'null'}, {'run_id': 'eb400221-efd7-4e1a-90c9-952f32a10b60', 'state': 'UNKNOWN', 'errors': 'null'}], 'state': 'RUNNING'}
+    # example of what it returns:
+    # {
+    #   "run_set_id": "cdcdc570-f6f3-4425-9404-4d70cd74ce2a",
+    #   "runs": [
+    #     {
+    #       "run_id": "0a72f308-4931-436b-bbfe-55856f7c1a39",
+    #       "state": "UNKNOWN",
+    #       "errors": "null"
+    #     },
+    #     {
+    #       "run_id": "eb400221-efd7-4e1a-90c9-952f32a10b60",
+    #       "state": "UNKNOWN",
+    #       "errors": "null"
+    #     }
+    #   ],
+    #   "state": "RUNNING"
+    # }
     logging.debug(response.json())
 
 def clone_workspace(billing_project_name, workspace_name, header):
