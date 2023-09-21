@@ -96,7 +96,10 @@ def poll_for_app_url(workspaceId, app, azure_token):
         response = json.loads(response.text)
         logging.debug(response)
 
-        #TODO have i covered all cases?
+        # Don't run in an infinite loop if you forgot to start the app/it was never created
+        if app_type not in [item['appType'] for item in response]:
+            print(f"{app_type} not found in apps, has it been started?")
+            return ""
         for entries in response:
             if entries['appType'] == app_type:
                 if entries['status'] == "PROVISIONING":
