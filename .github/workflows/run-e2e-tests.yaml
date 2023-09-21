@@ -1,0 +1,65 @@
+name: run-azure-e2e-tests
+
+on:
+  workflow_call:
+    inputs:
+      #TODO how to decide/setup branch/versions etc
+      branch:
+        description: 'Branch to run tests on'
+        required: true
+        default: 'main'
+        type: string
+      bee-name:
+        description: 'bee name'
+        required: true
+        type: string
+      billing-project-name:
+        description: 'name of billing project'
+        required: true
+        type: string
+
+env:
+  CHECKOUT_PATH: "dsp-reusable-workflows/" # arbitrary folder name to checkout to for organizational purposes
+  SCRIPT_PATH: "e2e-test/" # location in the checked-out repo of the script to run
+  ARTIFACT_PATH: "test-results/" # arbitrary folder name to download test-results to for organizational purposes
+  BEE_NAME: '${{ inputs.bee-name }}'
+  BILLING_PROJECT_NAME: '${{ inputs.billing-project-name }}' # github token for access to kick off a job in the private repo
+
+jobs:
+  run-e2e-test-job:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: "Checkout dsp-reusable-workflows"
+        uses: actions/checkout@v3
+        with:
+          ref: main
+          repository: broadinstitute/dsp-reusable-workflows
+          path: ${{ env.CHECKOUT_PATH }}
+
+      - name: Setup Python # Set Python version
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9 #3.11 is causing problems with the wds client - going back to 3.9 for now
+
+      - name: Install pytest
+        run: |
+          cd ${{ env.CHECKOUT_PATH }}${{ env.SCRIPT_PATH }}
+          pip install -r requirements.txt
+
+      - name: 'Obtain OAuth2 2.0 Access Token'
+        id: 'obtain-token'
+        uses: google-github-actions/auth@v1
+        with:
+          token_format: 'access_token'
+          workload_identity_provider: 'projects/1038484894585/locations/global/workloadIdentityPools/github-wi-pool/providers/github-wi-provider'
+          service_account: 'firecloud-qa@broad-dsde-qa.iam.gserviceaccount.com'
+          access_token_scopes: 'profile, email, openid'
+          access_token_subject: 'hermione.owner@quality.firecloud.org'
+          export_environment_variables: false 
+
+      - name: Run test
+        run: |
+          cd ${{ env.CHECKOUT_PATH }}${{ env.SCRIPT_PATH }}
+          AZURE_TOKEN=${{ steps.obtain-token.outputs.access_token }}\
+            python e2etest.py
