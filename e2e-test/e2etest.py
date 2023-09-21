@@ -21,15 +21,15 @@ def run_workspace_app_test(cbas, wds_upload, cbas_submit_workflow, test_cloning)
     workspace_id, workspace_name = create_workspace(cbas, billing_project_name, header)
 
     # track to see when the workspace WDS is ready to upload data into them
-    # sleep for 1 minute to allow apps to start up
+    # sleep to allow apps to start up
     if wds_upload or cbas_submit_workflow:
-        logging.info("Sleeping for 60 seconds while apps starts up")
-        time.sleep(60)
+        logging.info("Sleeping for 30 seconds while apps start up")
+        time.sleep(30)
     else:
         print("TEST COMPLETE.")
 
     if wds_upload:
-        logging.info(f"trying to see wds is ready to upload stuff for workspace {workspace_id}")
+        logging.info(f"trying to see wds is ready to upload to workspace {workspace_id}")
         wds_url = poll_for_app_url(workspace_id, "wds", azure_token)
         if wds_url == "":
             logging.error(f"wds errored out for workspace {workspace_id}")
@@ -49,10 +49,5 @@ def run_workspace_app_test(cbas, wds_upload, cbas_submit_workflow, test_cloning)
 
     print("TEST COMPLETE.")
 
-
-#Run create-wds-test
-# run_workspace_app_test(cbas,wds_upload,cbas_submit_workflow,test_cloning)
-
-#TODO: Do we need separate runs or is just this one enough?
-#Run clone-wds-test
+# Run create & clone wds test
 run_workspace_app_test(cbas,wds_upload,cbas_submit_workflow,True)

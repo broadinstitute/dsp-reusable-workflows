@@ -15,7 +15,7 @@ rawls_url = ""
 leo_url = ""
 
 def setup(bee_name):
-# define major service endpoints based on bee name
+    # define major service endpoints based on bee name
     global workspace_manager_url
     workspace_manager_url = f"https://workspace.{bee_name}.bee.envs-terra.bio"
     logging.debug(f"workspace_manager_url: {workspace_manager_url}")
@@ -31,11 +31,13 @@ def setup(bee_name):
 def create_workspace(cbas, billing_project_name, header, workspace_name = ""):
     # create a new workspace, need to have attributes or api call doesnt work
     rawls_workspace_api = f"{rawls_url}/api/workspaces";
+    workspace_name = workspace_name if workspace_name else f"api-workspace-{''.join(random.choices(string.ascii_lowercase, k=5))}"
     request_body= {
       "namespace": billing_project_name, # Billing project name
-      "name": workspace_name if workspace_name else f"api-workspace-{''.join(random.choices(string.ascii_lowercase, k=5))}",
+      "name": workspace_name,
       "attributes": {}};
 
+    logging.debug(f"Creating workspace with name {workspace_name}")
     workpace_response = requests.post(url=rawls_workspace_api, json=request_body, headers=header)
     logging.debug(f"url: {rawls_workspace_api}")
     logging.debug(f"response: {workpace_response}")
@@ -67,12 +69,13 @@ def create_workspace(cbas, billing_project_name, header, workspace_name = ""):
     # enable CBAS if specified
     if cbas is True:
         logging.info(f"Enabling CBAS for workspace {data['workspaceId']}")
-        start_cbas_api = f"{leo_url}/api/apps/v2/{data['workspaceId']}/terra-app-{str(uuid.uuid4())}";
+        start_cbas_url = f"{leo_url}/api/apps/v2/{data['workspaceId']}/terra-app-{str(uuid.uuid4())}";
+        logging.debug(f"start_cbas_url: {start_cbas_url}")
         request_body2 = {
           "appType": "CROMWELL"
         } 
         
-        cbas_response = requests.post(url=start_cbas_api, json=request_body2, headers=header)
+        cbas_response = requests.post(url=start_cbas_url, json=request_body2, headers=header)
         # will return 202 or error
         logging.debug(cbas_response)
 
@@ -88,8 +91,10 @@ def poll_for_app_url(workspaceId, app, azure_token):
     app_type = "CROMWELL" if app != 'wds' else app.upper();
     logging.info(f"App type: {app_type}")
 
-    #TODO: can this get into an infinite loop?
-    while True:
+    # prevent infinite loop
+    poll_count = 20 # 30s x 20 = 10 min
+
+    while poll_count > 0:
         response = requests.get(leo_get_app_api, headers=headers)
         assert response.status_code == 200, f"Error fetching apps from leo: ${response.text}"
         logging.info(f"Successfully retrieved details.")
@@ -113,6 +118,10 @@ def poll_for_app_url(workspaceId, app, azure_token):
                     return ""
                 else:
                     return entries['proxyUrls'][app]
+        poll_count -= 1
+
+    logging.error(f"App still provisioning or missing after 10 minutes, quitting")
+    return ""
 
 # UPLOAD DATA TO WORSPACE DATA SERVICE IN A WORKSPACE
 def upload_wds_data(wds_url, current_workspaceId, tsv_file_name, recordName, azure_token):
@@ -122,12 +131,18 @@ def upload_wds_data(wds_url, current_workspaceId, tsv_file_name, recordName, azu
     
     # records client is used to interact with Records in the data table
     records_client = wds_client.RecordsApi(api_client)
+
+    # determine number of lines in table
+    with open(tsv_file_name, 'r') as file:
+        for count, line in enumerate(file):
+            pass
+
     # data to upload to wds table
     logging.info("uploading to wds")
     # Upload entity to workspace data table with name "testType_uploaded"
     response = records_client.upload_tsv(current_workspaceId, version, recordName, tsv_file_name)
     logging.debug(response)
-    assert response.records_modified == 2504, f"Uploading to wds failed: {response.reason}"
+    assert response.records_modified == count, f"Uploading to wds failed: {response.reason}"
 
 
 # KICK OFF A WORKFLOW INSIDE A WORKSPACE
@@ -191,8 +206,3 @@ def check_wds_data(wds_url, workspaceId, recordName, azure_token):
     response = schema_client.describe_record_type(workspaceId, version, recordName);
     assert response.name == recordName, "Name does not match"
     assert response.count == 2504, "Count does not match"
-
-
-def delete_workspace():
-    # todo
-    return ""
