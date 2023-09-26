@@ -94,7 +94,7 @@ def parse_test_report_xml(filepath, additional_fields):
 
         return test_data_dict['testcase']
     elif test_data_dict['tests'] == 1:
-        normalize_test_dict(d['testcase'], additional_fields)
+        normalize_test_dict(test_data_dict['testcase'], additional_fields)
         return [test_data_dict['testcase']]
     else:
         return []
