@@ -38,7 +38,6 @@ def sanitize_key_names(data_struct):
         new[clean_key] = new_value
     return new
 
-
 def normalize_test_dict(testcase, additional_fields={}):
     '''
     Takes a dict of xml data for a particular test case and
@@ -55,7 +54,12 @@ def normalize_test_dict(testcase, additional_fields={}):
     if testcase.get('failure'):
         testcase['errorMessage'] = testcase['failure']["message"]
         testcase['stacktrace'] = testcase['failure']["#text"]
-        testcase['errorClass'] = testcase['failure']["type"].split(" ")[1]
+
+        # sometimes the type comes in form of something like type="class org.broadinstitute.dsde.workbench.service.RestException"
+        # sometimes it comes in form of something like type="sbt.ForkMain$ForkError"
+        # try to clean it up by splitting and taking the last element
+        testcase['errorClass'] = testcase['failure']["type"].split(" ")[-1]
+
         testcase['failure'] = True
     else:
         testcase['failure'] = False
