@@ -7,11 +7,6 @@ import uuid
 import time
 
 
-# TODO: remove this eventually
-# rawls_url = "https://rawls.dsde-dev.broadinstitute.org/"
-# leo_url = "https://leonardo.dsde-dev.broadinstitute.org/"
-
-
 # Setup configuration
 # These values should be injected into the environment before setup
 azure_token = os.environ.get("AZURE_TOKEN")
@@ -245,6 +240,11 @@ def check_submission_status(cbas_url, method_id, run_set_id):
 
 print("Starting Workflows Azure E2E test...")
 
+
+#TODO: Remove this
+print(f"BEE name received: {bee_name}")
+print(f"Billing project name received: {billing_project_name}")
+
 # Create workspace
 print("\nCreating workspace...")
 workspace_id = create_workspace()
@@ -252,9 +252,6 @@ workspace_id = create_workspace()
 # Create WORKFLOWS_APP and CROMWELL_RUNNER apps in workspace
 create_app(workspace_id, 'WORKFLOWS_APP', 'WORKSPACE_SHARED')
 create_app(workspace_id, 'CROMWELL_RUNNER_APP', 'USER_PRIVATE')
-
-# TODO: this should come from create_workspace function
-# workspace_id = "c4784c60-34a9-4145-8fd6-f7e2dd6e732d"
 
 # sleep for 5 minutes to allow workspace to provision and apps to start up
 print("\nSleeping for 5 minutes to allow workspace to provision and apps to start up...")
