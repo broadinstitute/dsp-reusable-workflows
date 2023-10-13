@@ -119,10 +119,11 @@ def upload_wds_data(wds_url, workspace_id, tsv_file_name, record_name):
 
 def create_cbas_method(cbas_url, workspace_id):
     method_name = "no-tasks-workflow"
+    #TODO: change branch to main
     request_body = {
         "method_name": method_name,
         "method_source": "GitHub",
-        "method_url": "https://raw.githubusercontent.com/DataBiosphere/cbas/sps_azure_e2e_test/e2e-test/resources/no-tasks-workflow.wdl",
+        "method_url": "https://raw.githubusercontent.com/broadinstitute/dsp-reusable-workflows/sps_cbas_e2e_test/e2e-test/resources/cbas/no-tasks-workflow.wdl",
         "method_version": "develop"
     }
 
@@ -174,8 +175,8 @@ def submit_no_tasks_workflow(cbas_url, method_version_id):
     }
 
     #open text file in read mode
-    request_body_file = open("resources/submit_workflow_body.json", "r")
-    request_body = request_body_file.read().replace("{METHOD_VERSION_ID}", method_version_id);
+    request_body_file = open("e2e-test/resources/cbas/submit_workflow_body.json", "r")
+    request_body = request_body_file.read().replace("{METHOD_VERSION_ID}", method_version_id)
     request_body_file.close()
 
     print(f"Submitting workflow to CBAS...")
@@ -264,7 +265,7 @@ wds_url = get_app_url(workspace_id, 'WDS', 'wds')
 if wds_url == "":
     print(f"WDS app not ready or errored out for workspace {workspace_id}")
     exit(1)
-upload_wds_data(wds_url, workspace_id, "resources/cbas-e2e-test-data.tsv", "test-data")
+upload_wds_data(wds_url, workspace_id, "e2e-test/resources/cbas/cbas-e2e-test-data.tsv", "test-data")
 
 # Submit workflow to CBAS
 print(f"\nChecking to see if WORKFLOWS app is ready to submit workflow in workspace {workspace_id}...")
