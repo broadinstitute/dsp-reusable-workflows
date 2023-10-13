@@ -19,7 +19,7 @@ leo_url = f"https://leonardo.{bee_name}.bee.envs-terra.bio"
 
 def create_workspace():
     headers = {
-        "Authorization": azure_token,
+        "Authorization": f"Bearer {azure_token}",
         "accept": "application/json"
     }
 
@@ -53,7 +53,7 @@ def create_app(workspace_id, app_type, access_scope):
         "accessScope": f"{access_scope}"
     }
     headers = {
-        "Authorization": azure_token,
+        "Authorization": f"Bearer {azure_token}",
         "accept": "application/json"
     }
 
@@ -67,7 +67,7 @@ def get_app_url(workspace_id, app_type, proxy_url_name):
     """"Get url for wds/cbas."""
     uri = f"{leo_url}/api/apps/v2/{workspace_id}?includeDeleted=false"
 
-    headers = {"Authorization": azure_token,
+    headers = {"Authorization": f"Bearer {azure_token}",
                "accept": "application/json"}
 
     response = requests.get(uri, headers=headers)
@@ -105,7 +105,7 @@ def upload_wds_data(wds_url, workspace_id, tsv_file_name, record_name):
     tsv_file.close()
 
     uri = f"{wds_url}/{workspace_id}/tsv/v0.2/{record_name}"
-    headers = {"Authorization": azure_token}
+    headers = {"Authorization": f"Bearer {azure_token}"}
 
     response = requests.post(uri, files={'records':request_file}, headers=headers)
 
@@ -128,7 +128,7 @@ def create_cbas_method(cbas_url, workspace_id):
 
     uri = f"{cbas_url}/api/batch/v1/methods"
     headers = {
-        "Authorization": azure_token,
+        "Authorization": f"Bearer {azure_token}",
         "accept": "application/json",
         "Content-Type": "application/json"
     }
@@ -148,7 +148,7 @@ def create_cbas_method(cbas_url, workspace_id):
 def get_method_version_id(cbas_url, method_id):
     uri = f"{cbas_url}/api/batch/v1/methods?method_id={method_id}"
     headers = {
-        "Authorization": azure_token,
+        "Authorization": f"Bearer {azure_token}",
         "accept": "application/json"
     }
 
@@ -168,7 +168,7 @@ def get_method_version_id(cbas_url, method_id):
 def submit_no_tasks_workflow(cbas_url, method_version_id):
     uri = f"{cbas_url}/api/batch/v1/run_sets"
     headers = {
-        "Authorization": azure_token,
+        "Authorization": f"Bearer {azure_token}",
         "accept": "application/json",
         "Content-Type": "application/json"
     }
@@ -194,7 +194,7 @@ def submit_no_tasks_workflow(cbas_url, method_version_id):
 
 def check_outputs_data(wds_url, workspace_id, record_type, record_name):
     uri = f"{wds_url}/{workspace_id}/records/v0.2/{record_type}/{record_name}"
-    headers = {"Authorization": azure_token}
+    headers = {"Authorization": f"Bearer {azure_token}"}
 
     response = requests.get(uri, headers=headers)
 
@@ -219,7 +219,7 @@ def check_outputs_data(wds_url, workspace_id, record_type, record_name):
 def check_submission_status(cbas_url, method_id, run_set_id):
     uri = f"{cbas_url}/api/batch/v1/run_sets?method_id={method_id}"
     headers = {
-        "Authorization": azure_token,
+        "Authorization": f"Bearer {azure_token}",
         "accept": "application/json"
     }
 
