@@ -30,7 +30,7 @@ def run_workspace_app_test(cbas, wds_upload, cbas_submit_workflow, test_cloning)
 
     if wds_upload:
         logging.info(f"trying to see wds is ready to upload to workspace {workspace_id}")
-        wds_url = poll_for_app_url(workspace_id, "wds", azure_token)
+        wds_url = poll_for_app_url(workspace_id, "WDS", "wds", azure_token)
         if wds_url == "":
             logging.error(f"wds errored out for workspace {workspace_id}")
         else:
@@ -44,7 +44,7 @@ def run_workspace_app_test(cbas, wds_upload, cbas_submit_workflow, test_cloning)
 
     if test_cloning:
         clone_id = clone_workspace(billing_project_name, workspace_name, header)
-        wds_url = poll_for_app_url(clone_id, "wds", azure_token)
+        wds_url = poll_for_app_url(clone_id, "WDS", "wds", azure_token)
         check_wds_data(wds_url, clone_id, "test", azure_token)
 
     print("TEST COMPLETE.")

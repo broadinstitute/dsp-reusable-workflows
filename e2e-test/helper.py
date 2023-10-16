@@ -81,23 +81,20 @@ def create_workspace(cbas, billing_project_name, header, workspace_name = ""):
 
     return data['workspaceId'], data['name']
 
-# GET WDS OR CROMWELL ENDPOINT URL FROM LEO
-def poll_for_app_url(workspaceId, app, azure_token):
-    """"Get url for wds/cbas."""
+# GET APP PROXY URL FROM LEO
+def poll_for_app_url(workspaceId, app_type, proxy_url_name, azure_token):
+    """"Get proxy url for apps."""
     leo_get_app_api = f"{leo_url}/api/apps/v2/{workspaceId}?includeDeleted=false"
     headers = {"Authorization": "Bearer " + azure_token,
                "accept": "application/json"}
-
-    app_type = "CROMWELL" if app != 'wds' else app.upper();
-    logging.info(f"App type: {app_type}")
 
     # prevent infinite loop
     poll_count = 20 # 30s x 20 = 10 min
 
     while poll_count > 0:
         response = requests.get(leo_get_app_api, headers=headers)
-        assert response.status_code == 200, f"Error fetching apps from leo: ${response.text}"
-        logging.info(f"Successfully retrieved details.")
+        assert response.status_code == 200, f"Error fetching apps from Leo: ${response.text}"
+        logging.info(f"Successfully retrieved details for {app_type} app")
         response = json.loads(response.text)
         logging.debug(response)
 
@@ -108,16 +105,16 @@ def poll_for_app_url(workspaceId, app, azure_token):
         for entries in response:
             if entries['appType'] == app_type:
                 if entries['status'] == "PROVISIONING":
-                    logging.info(f"{app} is still provisioning")
+                    logging.info(f"{app_type} is still provisioning")
                     time.sleep(30)
                 elif entries['status'] == 'ERROR':
-                    logging.error(f"{app} is in ERROR state. Quitting.")
+                    logging.error(f"{app_type} is in ERROR state. Quitting.")
                     return ""
-                elif app not in entries['proxyUrls'] or entries['proxyUrls'][app] is None:
-                    logging.error(f"{app} proxyUrls not found: {entries}")
+                elif entries['proxyUrls'][proxy_url_name] is None:
+                    logging.error(f"{app_type} proxyUrls not found: {entries}")
                     return ""
                 else:
-                    return entries['proxyUrls'][app]
+                    return entries['proxyUrls'][proxy_url_name]
         poll_count -= 1
 
     logging.error(f"App still provisioning or missing after 10 minutes, quitting")
@@ -147,7 +144,7 @@ def upload_wds_data(wds_url, current_workspaceId, tsv_file_name, recordName, azu
 
 # KICK OFF A WORKFLOW INSIDE A WORKSPACE
 def submit_workflow_assemble_refbased(workspaceId, dataFile, azure_token):
-    cbas_url = poll_for_app_url(workspaceId, "cbas", azure_token)
+    cbas_url = poll_for_app_url(workspaceId, "CROMWELL", "cbas", azure_token)
     logging.debug(cbas_url)
     #open text file in read mode
     text_file = open(dataFile, "r")

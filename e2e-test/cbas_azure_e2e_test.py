@@ -1,3 +1,4 @@
+from helper import *
 import requests
 import os
 import json
@@ -13,8 +14,8 @@ azure_token = os.environ.get("AZURE_TOKEN")
 bee_name = os.environ.get("BEE_NAME")
 billing_project_name = os.environ.get("BILLING_PROJECT_NAME")
 
-rawls_url = f"https://rawls.{bee_name}.bee.envs-terra.bio"
-leo_url = f"https://leonardo.{bee_name}.bee.envs-terra.bio"
+# rawls_url = f"https://rawls.{bee_name}.bee.envs-terra.bio"
+# leo_url = f"https://leonardo.{bee_name}.bee.envs-terra.bio"
 
 
 def create_workspace():
@@ -62,40 +63,39 @@ def create_app(workspace_id, app_type, access_scope):
     print(response.text)
 
 
-# Get WDS or WORKFLOWS app proxy url from Leo
-def get_app_url(workspace_id, app_type, proxy_url_name):
-    """"Get url for wds/cbas."""
-    uri = f"{leo_url}/api/apps/v2/{workspace_id}?includeDeleted=false"
-
-    headers = {"Authorization": f"Bearer {azure_token}",
-               "accept": "application/json"}
-
-    response = requests.get(uri, headers=headers)
-    status_code = response.status_code
-
-    if status_code != 200:
-        print(response.text)
-        exit(1)
-    print(f"Successfully retrieved details for {app_type} app")
-    response = json.loads(response.text)
-
-    app_url = ""
-
-    for entries in response:
-        if entries['appType'] == app_type and entries['proxyUrls'][proxy_url_name] is not None:
-            if(entries['status'] == "PROVISIONING"):
-                print(f"{app_type} is still provisioning")
-                break
-            print(f"App status: {entries['status']}")
-            app_url = entries['proxyUrls'][proxy_url_name]
-            break
-
-    if app_url is None:
-        print(f"{app_type} is missing in current workspace")
-    else:
-        print(f"'{proxy_url_name}' url in {app_type} app: {app_url}")
-
-    return app_url
+# # Get WDS or WORKFLOWS app proxy url from Leo
+# def get_app_url(workspace_id, app_type, proxy_url_name):
+#     uri = f"{leo_url}/api/apps/v2/{workspace_id}?includeDeleted=false"
+#
+#     headers = {"Authorization": f"Bearer {azure_token}",
+#                "accept": "application/json"}
+#
+#     response = requests.get(uri, headers=headers)
+#     status_code = response.status_code
+#
+#     if status_code != 200:
+#         print(response.text)
+#         exit(1)
+#     print(f"Successfully retrieved details for {app_type} app")
+#     response = json.loads(response.text)
+#
+#     app_url = ""
+#
+#     for entries in response:
+#         if entries['appType'] == app_type and entries['proxyUrls'][proxy_url_name] is not None:
+#             if(entries['status'] == "PROVISIONING"):
+#                 print(f"{app_type} is still provisioning")
+#                 break
+#             print(f"App status: {entries['status']}")
+#             app_url = entries['proxyUrls'][proxy_url_name]
+#             break
+#
+#     if app_url is None:
+#         print(f"{app_type} is missing in current workspace")
+#     else:
+#         print(f"'{proxy_url_name}' url in {app_type} app: {app_url}")
+#
+#     return app_url
 
 # Upload data to WDS
 def upload_wds_data(wds_url, workspace_id, tsv_file_name, record_name):
@@ -241,10 +241,7 @@ def check_submission_status(cbas_url, method_id, run_set_id):
 
 print("Starting Workflows Azure E2E test...")
 
-
-#TODO: Remove this
-print(f"BEE name received: {bee_name}")
-print(f"Billing project name received: {billing_project_name}")
+setup(bee_name)
 
 # Create workspace
 print("\nCreating workspace...")
@@ -261,7 +258,7 @@ time.sleep(5 * 60)
 # Upload data to workspace
 # check that WDS is ready; if not exit the test
 print(f"\nChecking to see if WDS app is ready to upload data for workspace {workspace_id}...")
-wds_url = get_app_url(workspace_id, 'WDS', 'wds')
+wds_url = poll_for_app_url(workspace_id, 'WDS', 'wds', azure_token)
 if wds_url == "":
     print(f"WDS app not ready or errored out for workspace {workspace_id}")
     exit(1)
@@ -269,7 +266,7 @@ upload_wds_data(wds_url, workspace_id, "e2e-test/resources/cbas/cbas-e2e-test-da
 
 # Submit workflow to CBAS
 print(f"\nChecking to see if WORKFLOWS app is ready to submit workflow in workspace {workspace_id}...")
-cbas_url = get_app_url(workspace_id, 'WORKFLOWS_APP', 'cbas')
+cbas_url = poll_for_app_url(workspace_id, 'WORKFLOWS_APP', 'cbas', azure_token)
 if cbas_url == "":
     print(f"WORKFLOWS app not ready or errored out for workspace {workspace_id}")
     exit(1)
