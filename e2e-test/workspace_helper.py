@@ -11,7 +11,7 @@ import time
 def create_workspace(billing_project_name, azure_token, rawls_url, workspace_name = ""):
     # create a new workspace, need to have attributes or api call doesnt work
     rawls_workspace_api = f"{rawls_url}/api/workspaces"
-    workspace_name = workspace_name if workspace_name else f"api-workspace-{''.join(random.choices(string.ascii_lowercase, k=5))}"
+    workspace_name = workspace_name if workspace_name else f"e2e-test-api-workspace-{''.join(random.choices(string.ascii_lowercase, k=5))}"
     request_body= {
         "namespace": billing_project_name,
         "name": workspace_name,

@@ -39,6 +39,7 @@ def upload_wds_data(wds_url, workspace_id, tsv_file_name, record_name):
     print(f"Successfully uploaded data to WDS. Response: {response.json()}")
 
 
+# Create no-tasks-workflow method in CBAS
 def create_cbas_method(cbas_url, workspace_id):
     method_name = "no-tasks-workflow"
     #TODO: change branch to main
@@ -68,6 +69,7 @@ def create_cbas_method(cbas_url, workspace_id):
     return response['method_id']
 
 
+# Get method_version_id for a given method
 def get_method_version_id(cbas_url, method_id):
     uri = f"{cbas_url}/api/batch/v1/methods?method_id={method_id}"
     headers = {
@@ -88,6 +90,7 @@ def get_method_version_id(cbas_url, method_id):
     return response['methods'][0]['method_versions'][0]['method_version_id']
 
 
+# Submit no-tasks-workflow to CBAS
 def submit_no_tasks_workflow(cbas_url, method_version_id):
     uri = f"{cbas_url}/api/batch/v1/run_sets"
     headers = {
@@ -115,6 +118,7 @@ def submit_no_tasks_workflow(cbas_url, method_version_id):
     return response['run_set_id']
 
 
+# Check if outputs were written back to WDS for given record
 def check_outputs_data(wds_url, workspace_id, record_type, record_name):
     uri = f"{wds_url}/{workspace_id}/records/v0.2/{record_type}/{record_name}"
     headers = {"Authorization": f"Bearer {azure_token}"}
@@ -132,13 +136,14 @@ def check_outputs_data(wds_url, workspace_id, record_type, record_name):
     attributes = response['attributes']
 
     print("Checking that output attributes exist in record...")
-    if 'team' in attributes and 'rank' in attributes:
+    if 'team' in attributes and attributes['team'] == "Guardians of the Galaxy" and 'rank' in attributes and attributes['rank'] == "Captain":
         print("Outputs were successfully written back to WDS")
     else:
         print("Outputs were not written back to WDS")
         exit(1)
 
 
+# Check submission is in COMPLETE state
 def check_submission_status(cbas_url, method_id, run_set_id):
     uri = f"{cbas_url}/api/batch/v1/run_sets?method_id={method_id}"
     headers = {
@@ -194,6 +199,8 @@ if cbas_url == "":
 # create a new method
 method_id = create_cbas_method(cbas_url, workspace_id)
 method_version_id = get_method_version_id(cbas_url, method_id)
+
+# submit workflow to CBAS
 run_set_id = submit_no_tasks_workflow(cbas_url, method_version_id)
 
 # sleep for 2 minutes to allow submission to finish
