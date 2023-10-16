@@ -18,6 +18,9 @@ billing_project_name = os.environ.get("BILLING_PROJECT_NAME")
 rawls_url = f"https://rawls.{bee_name}.bee.envs-terra.bio"
 leo_url = f"https://leonardo.{bee_name}.bee.envs-terra.bio"
 
+# rawls_url = "https://rawls.dsde-dev.broadinstitute.org/"
+# leo_url = "https://leonardo.dsde-dev.broadinstitute.org/"
+
 
 # def create_workspace():
 #     headers = {
@@ -102,7 +105,7 @@ leo_url = f"https://leonardo.{bee_name}.bee.envs-terra.bio"
 def upload_wds_data(wds_url, workspace_id, tsv_file_name, record_name):
     #open TSV file in read mode
     tsv_file = open(tsv_file_name, "r")
-    request_file = tsv_file.read();
+    request_file = tsv_file.read()
     tsv_file.close()
 
     uri = f"{wds_url}/{workspace_id}/tsv/v0.2/{record_name}"
@@ -247,15 +250,15 @@ print("\nCreating workspace...")
 workspace_id, workspace_name = create_workspace(billing_project_name, azure_token, rawls_url)
 
 # Create WORKFLOWS_APP and CROMWELL_RUNNER apps in workspace
-create_app(workspace_id, leo_url, 'WORKFLOWS_APP', 'WORKSPACE_SHARED')
-create_app(workspace_id, leo_url, 'CROMWELL_RUNNER_APP', 'USER_PRIVATE')
+create_app(workspace_id, leo_url, 'WORKFLOWS_APP', 'WORKSPACE_SHARED', azure_token)
+create_app(workspace_id, leo_url, 'CROMWELL_RUNNER_APP', 'USER_PRIVATE', azure_token)
 
 # sleep for 5 minutes to allow workspace to provision and apps to start up
-# print("\nSleeping for 5 minutes to allow workspace to provision and apps to start up...")
-# time.sleep(5 * 60)
+print("\nSleeping for 5 minutes to allow workspace to provision and apps to start up...")
+time.sleep(5 * 60)
 
 # Upload data to workspace
-# check that WDS is ready; if not exit the test
+# check that WDS is ready; if not exit the test after 10 minutes of polling
 print(f"\nChecking to see if WDS app is ready to upload data for workspace {workspace_id}...")
 wds_url = poll_for_app_url(workspace_id, 'WDS', 'wds', azure_token, leo_url)
 if wds_url == "":
@@ -263,7 +266,7 @@ if wds_url == "":
     exit(1)
 upload_wds_data(wds_url, workspace_id, "e2e-test/resources/cbas/cbas-e2e-test-data.tsv", "test-data")
 
-# Submit workflow to CBAS
+# Submit workflow to CBAS; if not exit the test after 10 minutes of polling
 print(f"\nChecking to see if WORKFLOWS app is ready to submit workflow in workspace {workspace_id}...")
 cbas_url = poll_for_app_url(workspace_id, 'WORKFLOWS_APP', 'cbas', azure_token, leo_url)
 if cbas_url == "":

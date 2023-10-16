@@ -5,9 +5,6 @@ import random
 import string
 import uuid
 import time
-import logging
-
-logging.basicConfig(level=logging.DEBUG)
 
 
 # CREATE WORKSPACE ACTION
@@ -25,11 +22,7 @@ def create_workspace(billing_project_name, azure_token, rawls_url, workspace_nam
         "accept": "application/json"
     }
 
-    logging.debug(f"Creating workspace with name {workspace_name}")
     workspace_response = requests.post(url=rawls_workspace_api, json=request_body, headers=header)
-    logging.debug(f"Rawls url: {rawls_workspace_api}")
-    logging.debug(f"Response: {workpace_response}")
-    logging.debug(f"Request_body: {request_body}")
     assert workspace_response.status_code == 201, f"Error creating workspace: ${workspace_response.text}"
 
     # example json that is returned by request:
@@ -49,7 +42,6 @@ def create_workspace(billing_project_name, azure_token, rawls_url, workspace_nam
     #   "workspaceVersion": "v2"
     # }
     workspace_response_json = workspace_response.json()
-    logging.debug(f"JSON response: {workspace_response_json}")
     data = json.loads(json.dumps(workspace_response_json))
 
     workspace_id = data['workspaceId']
