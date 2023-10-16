@@ -19,8 +19,8 @@ rawls_url = f"https://rawls.{bee_name}.bee.envs-terra.bio"
 leo_url = f"https://leonardo.{bee_name}.bee.envs-terra.bio"
 
 
-# Upload data to WDS
-def upload_wds_data(wds_url, workspace_id, tsv_file_name, record_name):
+# Upload data to WDS using APIs
+def upload_wds_data_using_api(wds_url, workspace_id, tsv_file_name, record_name):
     #open TSV file in read mode
     tsv_file = open(tsv_file_name, "r")
     request_file = tsv_file.read()
@@ -166,6 +166,9 @@ def check_submission_status(cbas_url, method_id, run_set_id):
     print(f"Submission '{run_set_id}' status: COMPLETE.")
 
 
+print("Exiting script with code 1 to see if failure is reported in Slack channel")
+exit(1)
+
 print("Starting Workflows Azure E2E test...")
 
 # Create workspace
@@ -187,7 +190,7 @@ wds_url = poll_for_app_url(workspace_id, 'WDS', 'wds', azure_token, leo_url)
 if wds_url == "":
     print(f"WDS app not ready or errored out for workspace {workspace_id}")
     exit(1)
-upload_wds_data(wds_url, workspace_id, "e2e-test/resources/cbas/cbas-e2e-test-data.tsv", "test-data")
+upload_wds_data_using_api(wds_url, workspace_id, "e2e-test/resources/cbas/cbas-e2e-test-data.tsv", "test-data")
 
 # Submit workflow to CBAS; if not exit the test after 10 minutes of polling
 print(f"\nChecking to see if WORKFLOWS app is ready to submit workflow in workspace {workspace_id}...")
