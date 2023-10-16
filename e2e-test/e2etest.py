@@ -1,4 +1,5 @@
 from helper import *
+from app_helper import poll_for_app_url
 import os
 
 # Setup configuration
@@ -18,7 +19,7 @@ def run_workspace_app_test(cbas, wds_upload, cbas_submit_workflow, test_cloning)
     header = {"Authorization": "Bearer " + azure_token};
 
     # create the workspace
-    workspace_id, workspace_name = create_workspace(cbas, billing_project_name, header)
+    workspace_id, workspace_name = create_workspace_with_cromwell_app(cbas, billing_project_name, azure_token)
 
     # track to see when the workspace WDS is ready to upload data into them
     # sleep to allow apps to start up
@@ -30,7 +31,7 @@ def run_workspace_app_test(cbas, wds_upload, cbas_submit_workflow, test_cloning)
 
     if wds_upload:
         logging.info(f"trying to see wds is ready to upload to workspace {workspace_id}")
-        wds_url = poll_for_app_url(workspace_id, "WDS", "wds", azure_token)
+        wds_url = poll_for_app_url(workspace_id, "WDS", "wds", azure_token, leo_url)
         if wds_url == "":
             logging.error(f"wds errored out for workspace {workspace_id}")
         else:
@@ -44,7 +45,7 @@ def run_workspace_app_test(cbas, wds_upload, cbas_submit_workflow, test_cloning)
 
     if test_cloning:
         clone_id = clone_workspace(billing_project_name, workspace_name, header)
-        wds_url = poll_for_app_url(clone_id, "WDS", "wds", azure_token)
+        wds_url = poll_for_app_url(clone_id, "WDS", "wds", azure_token, leo_url)
         check_wds_data(wds_url, clone_id, "test", azure_token)
 
     print("TEST COMPLETE.")

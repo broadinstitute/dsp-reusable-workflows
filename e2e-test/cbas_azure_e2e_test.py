@@ -1,4 +1,5 @@
-from helper import *
+from workspace_helper import create_workspace
+from app_helper import create_app, poll_for_app_url
 import requests
 import os
 import json
@@ -14,53 +15,53 @@ azure_token = os.environ.get("AZURE_TOKEN")
 bee_name = os.environ.get("BEE_NAME")
 billing_project_name = os.environ.get("BILLING_PROJECT_NAME")
 
-# rawls_url = f"https://rawls.{bee_name}.bee.envs-terra.bio"
-# leo_url = f"https://leonardo.{bee_name}.bee.envs-terra.bio"
+rawls_url = f"https://rawls.{bee_name}.bee.envs-terra.bio"
+leo_url = f"https://leonardo.{bee_name}.bee.envs-terra.bio"
 
 
-def create_workspace():
-    headers = {
-        "Authorization": f"Bearer {azure_token}",
-        "accept": "application/json"
-    }
+# def create_workspace():
+#     headers = {
+#         "Authorization": f"Bearer {azure_token}",
+#         "accept": "application/json"
+#     }
+#
+#     # create a new workspace, need to have attributes or api call doesn't work
+#     uri = f"{rawls_url}/api/workspaces";
+#     workspace_name = f"sshah-e2e-api-workspace-{''.join(random.choices(string.ascii_lowercase, k=5))}"
+#     request_body= {
+#       "namespace": billing_project_name,
+#       "name": workspace_name,
+#       "attributes": {}}
+#
+#     response = requests.post(url=uri, json=request_body, headers=headers)
+#     status_code = response.status_code
+#
+#     if status_code != 201:
+#         print(response.text)
+#         exit(1)
+#
+#     response = json.loads(response.text)
+#     workspace_id = response['workspaceId']
+#     print(f"Successfully started workspace creation for '{workspace_name}' in billing project '{billing_project_name}'. Workspace ID returned: {workspace_id}")
+#
+#     return workspace_id
 
-    # create a new workspace, need to have attributes or api call doesn't work
-    uri = f"{rawls_url}/api/workspaces";
-    workspace_name = f"sshah-e2e-api-workspace-{''.join(random.choices(string.ascii_lowercase, k=5))}"
-    request_body= {
-      "namespace": billing_project_name,
-      "name": workspace_name,
-      "attributes": {}}
 
-    response = requests.post(url=uri, json=request_body, headers=headers)
-    status_code = response.status_code
-
-    if status_code != 201:
-        print(response.text)
-        exit(1)
-
-    response = json.loads(response.text)
-    workspace_id = response['workspaceId']
-    print(f"Successfully started workspace creation for '{workspace_name}' in billing project '{billing_project_name}'. Workspace ID returned: {workspace_id}")
-
-    return workspace_id
-
-
-def create_app(workspace_id, app_type, access_scope):
-    print(f"\nCreating {app_type} in workspace {workspace_id}...")
-    uri = f"{leo_url}/api/apps/v2/{workspace_id}/terra-app-{str(uuid.uuid4())}"
-    body = {
-        "appType": f"{app_type}",
-        "accessScope": f"{access_scope}"
-    }
-    headers = {
-        "Authorization": f"Bearer {azure_token}",
-        "accept": "application/json"
-    }
-
-    response = requests.post(url=uri, json=body, headers=headers)
-    # will return 202 or error
-    print(response.text)
+# def create_app(workspace_id, app_type, access_scope):
+#     print(f"\nCreating {app_type} in workspace {workspace_id}...")
+#     uri = f"{leo_url}/api/apps/v2/{workspace_id}/terra-app-{str(uuid.uuid4())}"
+#     body = {
+#         "appType": f"{app_type}",
+#         "accessScope": f"{access_scope}"
+#     }
+#     headers = {
+#         "Authorization": f"Bearer {azure_token}",
+#         "accept": "application/json"
+#     }
+#
+#     response = requests.post(url=uri, json=body, headers=headers)
+#     # will return 202 or error
+#     print(response.text)
 
 
 # # Get WDS or WORKFLOWS app proxy url from Leo
@@ -241,24 +242,22 @@ def check_submission_status(cbas_url, method_id, run_set_id):
 
 print("Starting Workflows Azure E2E test...")
 
-setup(bee_name)
-
 # Create workspace
 print("\nCreating workspace...")
-workspace_id = create_workspace()
+workspace_id, workspace_name = create_workspace(billing_project_name, azure_token, rawls_url)
 
 # Create WORKFLOWS_APP and CROMWELL_RUNNER apps in workspace
-create_app(workspace_id, 'WORKFLOWS_APP', 'WORKSPACE_SHARED')
-create_app(workspace_id, 'CROMWELL_RUNNER_APP', 'USER_PRIVATE')
+create_app(workspace_id, leo_url, 'WORKFLOWS_APP', 'WORKSPACE_SHARED')
+create_app(workspace_id, leo_url, 'CROMWELL_RUNNER_APP', 'USER_PRIVATE')
 
 # sleep for 5 minutes to allow workspace to provision and apps to start up
-print("\nSleeping for 5 minutes to allow workspace to provision and apps to start up...")
-time.sleep(5 * 60)
+# print("\nSleeping for 5 minutes to allow workspace to provision and apps to start up...")
+# time.sleep(5 * 60)
 
 # Upload data to workspace
 # check that WDS is ready; if not exit the test
 print(f"\nChecking to see if WDS app is ready to upload data for workspace {workspace_id}...")
-wds_url = poll_for_app_url(workspace_id, 'WDS', 'wds', azure_token)
+wds_url = poll_for_app_url(workspace_id, 'WDS', 'wds', azure_token, leo_url)
 if wds_url == "":
     print(f"WDS app not ready or errored out for workspace {workspace_id}")
     exit(1)
@@ -266,7 +265,7 @@ upload_wds_data(wds_url, workspace_id, "e2e-test/resources/cbas/cbas-e2e-test-da
 
 # Submit workflow to CBAS
 print(f"\nChecking to see if WORKFLOWS app is ready to submit workflow in workspace {workspace_id}...")
-cbas_url = poll_for_app_url(workspace_id, 'WORKFLOWS_APP', 'cbas', azure_token)
+cbas_url = poll_for_app_url(workspace_id, 'WORKFLOWS_APP', 'cbas', azure_token, leo_url)
 if cbas_url == "":
     print(f"WORKFLOWS app not ready or errored out for workspace {workspace_id}")
     exit(1)

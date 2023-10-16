@@ -1,4 +1,5 @@
-
+from workspace_helper import create_workspace
+from app_helper import poll_for_app_url
 import json
 import uuid
 import random
@@ -27,49 +28,19 @@ def setup(bee_name):
     logging.debug(f"leo_url: {leo_url}")
     return workspace_manager_url, rawls_url, leo_url
 
-# CREATE WORKSPACE ACTION
-def create_workspace(cbas, billing_project_name, header, workspace_name = ""):
-    # create a new workspace, need to have attributes or api call doesnt work
-    rawls_workspace_api = f"{rawls_url}/api/workspaces";
-    workspace_name = workspace_name if workspace_name else f"api-workspace-{''.join(random.choices(string.ascii_lowercase, k=5))}"
-    request_body= {
-      "namespace": billing_project_name, # Billing project name
-      "name": workspace_name,
-      "attributes": {}};
-
-    logging.debug(f"Creating workspace with name {workspace_name}")
-    workpace_response = requests.post(url=rawls_workspace_api, json=request_body, headers=header)
-    logging.debug(f"url: {rawls_workspace_api}")
-    logging.debug(f"response: {workpace_response}")
-    logging.debug(f"request_body: {request_body}")
-    assert workpace_response.status_code == 201, f"Error creating workspace: ${workpace_response.text}"
-    
-    # example json that is returned by request:
-    # {
-    #   "attributes": {},
-    #   "authorizationDomain": [],
-    #   "bucketName": "",
-    #   "createdBy": "yulialovesterra@gmail.com",
-    #   "createdDate": "2023-08-03T20:10:59.116Z",
-    #   "googleProject": "",
-    #   "isLocked": False,
-    #   "lastModified": "2023-08-03T20:10:59.116Z",
-    #   "name": "api-workspace-1",
-    #   "namespace": "yuliadub-test2",
-    #   "workspaceId": "ac466322-2325-4f57-895d-fdd6c3f8c7ad",
-    #   "workspaceType": "mc",
-    #   "workspaceVersion": "v2"
-    # }
-    workspace_response_json = workpace_response.json()
-    logging.debug(f"json response: {workspace_response_json}")
-    data = json.loads(json.dumps(workspace_response_json))
-    
-    logging.debug(f"data['workspaceId']:  {data['workspaceId']}")
+# CREATE WORKSPACE ACTION WITH APP CREATION
+def create_workspace_with_cromwell_app(cbas, billing_project_name, azure_token, workspace_name = ""):
+    workspace_id, workspace_name = create_workspace(billing_project_name, azure_token, rawls_url, workspace_name)
     
     # enable CBAS if specified
+    header = {
+      "Authorization": "Bearer " + azure_token,
+      "accept": "application/json"
+    }
+
     if cbas is True:
-        logging.info(f"Enabling CBAS for workspace {data['workspaceId']}")
-        start_cbas_url = f"{leo_url}/api/apps/v2/{data['workspaceId']}/terra-app-{str(uuid.uuid4())}";
+        logging.info(f"Enabling CBAS for workspace {workspace_id}")
+        start_cbas_url = f"{leo_url}/api/apps/v2/{workspace_id}/terra-app-{str(uuid.uuid4())}";
         logging.debug(f"start_cbas_url: {start_cbas_url}")
         request_body2 = {
           "appType": "CROMWELL"
@@ -79,46 +50,7 @@ def create_workspace(cbas, billing_project_name, header, workspace_name = ""):
         # will return 202 or error
         logging.debug(cbas_response)
 
-    return data['workspaceId'], data['name']
-
-# GET APP PROXY URL FROM LEO
-def poll_for_app_url(workspaceId, app_type, proxy_url_name, azure_token):
-    """"Get proxy url for apps."""
-    leo_get_app_api = f"{leo_url}/api/apps/v2/{workspaceId}?includeDeleted=false"
-    headers = {"Authorization": "Bearer " + azure_token,
-               "accept": "application/json"}
-
-    # prevent infinite loop
-    poll_count = 20 # 30s x 20 = 10 min
-
-    while poll_count > 0:
-        response = requests.get(leo_get_app_api, headers=headers)
-        assert response.status_code == 200, f"Error fetching apps from Leo: ${response.text}"
-        logging.info(f"Successfully retrieved details for {app_type} app")
-        response = json.loads(response.text)
-        logging.debug(response)
-
-        # Don't run in an infinite loop if you forgot to start the app/it was never created
-        if app_type not in [item['appType'] for item in response]:
-            print(f"{app_type} not found in apps, has it been started?")
-            return ""
-        for entries in response:
-            if entries['appType'] == app_type:
-                if entries['status'] == "PROVISIONING":
-                    logging.info(f"{app_type} is still provisioning")
-                    time.sleep(30)
-                elif entries['status'] == 'ERROR':
-                    logging.error(f"{app_type} is in ERROR state. Quitting.")
-                    return ""
-                elif entries['proxyUrls'][proxy_url_name] is None:
-                    logging.error(f"{app_type} proxyUrls not found: {entries}")
-                    return ""
-                else:
-                    return entries['proxyUrls'][proxy_url_name]
-        poll_count -= 1
-
-    logging.error(f"App still provisioning or missing after 10 minutes, quitting")
-    return ""
+    return workspace_id, workspace_name
 
 # UPLOAD DATA TO WORSPACE DATA SERVICE IN A WORKSPACE
 def upload_wds_data(wds_url, current_workspaceId, tsv_file_name, recordName, azure_token):
@@ -144,7 +76,7 @@ def upload_wds_data(wds_url, current_workspaceId, tsv_file_name, recordName, azu
 
 # KICK OFF A WORKFLOW INSIDE A WORKSPACE
 def submit_workflow_assemble_refbased(workspaceId, dataFile, azure_token):
-    cbas_url = poll_for_app_url(workspaceId, "CROMWELL", "cbas", azure_token)
+    cbas_url = poll_for_app_url(workspaceId, "CROMWELL", "cbas", azure_token, leo_url)
     logging.debug(cbas_url)
     #open text file in read mode
     text_file = open(dataFile, "r")
