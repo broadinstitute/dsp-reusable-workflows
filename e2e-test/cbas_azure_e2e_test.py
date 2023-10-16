@@ -166,9 +166,7 @@ def check_submission_status(cbas_url, method_id, run_set_id):
     print(f"Submission '{run_set_id}' status: COMPLETE.")
 
 
-print("Exiting script with code 1 to see if failure is reported in Slack channel")
-exit(1)
-
+# ---------------------- Start Workflows Azure E2E test ----------------------
 print("Starting Workflows Azure E2E test...")
 
 # Create workspace
