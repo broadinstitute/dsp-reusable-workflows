@@ -7,6 +7,7 @@ import wds_client
 import requests
 import time
 import logging
+import os
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -79,7 +80,7 @@ def create_workspace(cbas, billing_project_name, header, workspace_name = ""):
         # will return 202 or error
         logging.debug(cbas_response)
 
-    return data['workspaceId'], data['name']
+    return data['workspaceId'], data['name'], data["namespace"]
 
 # GET WDS OR CROMWELL ENDPOINT URL FROM LEO
 def poll_for_app_url(workspaceId, app, azure_token):
@@ -206,3 +207,117 @@ def check_wds_data(wds_url, workspaceId, recordName, azure_token):
     response = schema_client.describe_record_type(workspaceId, version, recordName);
     assert response.name == recordName, "Name does not match"
     assert response.count == 2504, "Count does not match"
+
+
+def output_message(msg, type=None):
+    current_time = time.strftime("%H:%M:%S", time.localtime())
+    msg = f'{current_time} - {msg}'
+    if type == 'DEBUG':
+        logging.debug(msg)
+    elif type == 'ERROR':
+        logging.error(msg)
+    else:
+        logging.info(msg)
+
+def handle_failed_request(response, msg, status_code=200):
+    if(response.status_code != status_code):
+        raise Exception(f'{response.status_code} - {msg}\n{response.text}')
+    
+def submit_hello_world_to_cromwell(app_url, workflow_test_name, bearer_token):
+    absolute_file_path = os.path.dirname(__file__)
+    workflow_source_path = os.path.join(absolute_file_path, './resources/cromwell_workflow_files/hello.wdl')
+    workflow_inputs_path = os.path.join(absolute_file_path, './resources/cromwell_workflow_files/hello.inputs')
+    workflow_endpoint = f'{app_url}/api/workflows/v1'
+    headers = {"Authorization": f'Bearer {bearer_token}',
+              "accept": "application/json",
+    }
+    with open(workflow_source_path, 'rb') as hello_wdl:
+        with open(workflow_inputs_path, 'rb') as hello_inputs:
+            files = {
+                'workflowSource': ('hello.wdl', hello_wdl, 'application/octet-stream'),
+                'workflowInputs': ('hello.inputs', hello_inputs, 'application/octet-stream'),
+                'workflowType': 'WDL',
+                'workflowTypeVersion': '1.0'
+            }
+            response = requests.post(workflow_endpoint, headers=headers, files=files)
+            handle_failed_request(response, f"Error submitting workflow to Cromwell for {workflow_test_name}", 201)
+            output_message(response.json(), "DEBUG")
+            return response.json()
+        
+def get_workflow_information(app_url, workflow_id, bearer_token):
+    workflow_endpoint = f'{app_url}/api/workflows/v1/{workflow_id}/status'
+    headers = {"Authorization": f'Bearer {bearer_token}',
+              "accept": "application/json"}
+    output_message(f"Fetching workflow status for {workflow_id}")
+    response = requests.get(workflow_endpoint, headers=headers)
+    handle_failed_request(response, f"Error fetching workflow metadata for {workflow_id}")
+    output_message(response.json(), "DEBUG")
+    return response.json()
+
+# workflow_ids is a deque of workflow ids
+def get_completed_workflow(bearer_token, app_url, workflow_ids, max_retries=4, sleep_timer=60 * 2):
+    success_statuses = ['Succeeded']
+    throw_exception_statuses = ['Aborted', 'Failed']
+    
+    current_running_workflow_count = 0
+    while workflow_ids:
+        if max_retries == 0:
+            raise Exception(f"Workflow(s) did not finish running within retry window ({max_retries} retries)")
+        
+        workflow_id = workflow_ids.pop()
+        workflow_metadata = get_workflow_information(app_url, workflow_id, bearer_token)
+        workflow_status = workflow_metadata['status']
+
+        if(workflow_status in throw_exception_statuses):
+            raise Exception(f"Exception raised: Workflow {workflow_id} reporting {workflow_status} status")
+        if workflow_status in success_statuses:
+            output_message(f"{workflow_id} finished running. Status: {workflow_metadata['status']}")
+        else:
+            workflow_ids.appendleft(workflow_id)
+            current_running_workflow_count += 1
+        if current_running_workflow_count == len(workflow_ids):
+            if current_running_workflow_count == 0:
+                output_message("Workflow(s) finished running")
+            else:
+                # Reset current count to 0 for next retry
+                # Decrement max_retries by 1
+                # Wait for sleep_timer before checking workflow statuses again (adjust value as needed)
+                output_message(f"These workflows have yet to return a completed status: [{', '.join(workflow_ids)}]")
+                max_retries -= 1
+                current_running_workflow_count = 0
+                time.sleep(sleep_timer)
+    output_message("Workflow(s) submission and completion successful")
+
+def delete_workspace(workspace_namespace, workspace_name, bearer_token):
+    if workspace_namespace and workspace_name:
+        delete_workspace_url = f"{rawls_url}/api/workspaces/v2/{workspace_namespace}/{workspace_name}"
+        headers = {"Authorization": f'Bearer {bearer_token}',
+                   "accept": "application/json"}
+        # First call to initiate workspace deletion
+        response = requests.delete(url=delete_workspace_url, headers=headers)
+        output_message(response.text, "DEBUG")                              
+        handle_failed_request(response, f"Error deleting workspace {workspace_name} - {workspace_namespace}", 202)
+        output_message(f"Workspace {workspace_name} - {workspace_namespace} delete request submitted")
+       
+        # polling to ensure that workspace is deleted (which takes about 5ish minutes)
+        is_workspace_deleted = False
+        token_expired = False
+        while not is_workspace_deleted and not token_expired:
+            time.sleep(2 * 60)
+            get_workspace_url = f"{rawls_url}/api/workspaces/{workspace_namespace}/{workspace_name}"
+            polling_response = requests.get(url=get_workspace_url, headers=headers)
+            polling_status_code = polling_response.status_code
+            output_message(f"Polling GET WORKSPACE - {polling_status_code}")
+            if polling_status_code == 200:
+                output_message(f"Workspace {workspace_name} - {workspace_namespace} is still active")
+            elif polling_status_code == 404:
+                is_workspace_deleted = True
+                output_message(f"Workspace {workspace_name} - {workspace_namespace} is deleted")
+            elif polling_status_code == 401:
+                token_expired = True
+            else:
+                output_message(f"Unexpected status code {polling_status_code} received\n{polling_response.text}", "ERROR")
+                raise Exception(polling_response.text)
+        if token_expired:
+            raise Exception(f"Workspace {workspace_name} was not deleted within bearer token lifespan")
+        

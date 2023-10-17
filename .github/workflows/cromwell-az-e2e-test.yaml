@@ -1,0 +1,54 @@
+name: cromwell-az-e2e-test
+
+on:
+  workflow_call:
+    inputs: 
+      branch:
+        description: 'Branch to run tests on'
+        default: main
+        required: true
+        type: string
+      project-name:
+        description: 'Project name to be used for namespace designation'
+        required: true
+        type: string
+      bearer-token:
+        description: 'Bearer token for owner auth'
+        required: true
+        type: string
+      bee-name:
+        description: 'Name of bee running tests'
+        required: true
+        type: string
+
+jobs:
+  run-cromwell-az-e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./e2e-test/cromwell_az_e2e_test
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: refs/heads/${{inputs.branch}}
+      - name: Set up python
+        id: setup-python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install poetry
+        uses: snok/install-poetry@v1
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction     
+      - name: Run e2e test
+        env:
+          POETRY_BEE_NAME: ${{inputs.bee-name}}
+          POETRY_BILLING_PROJECT_NAME: ${{inputs.project-name}}
+          POETRY_BEARER_TOKEN: ${{ inputs.bearer-token }}
+        run: |
+          poetry run start
+          
