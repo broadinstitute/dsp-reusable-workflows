@@ -22,6 +22,7 @@ def create_app(workspace_id, leo_url, app_type, access_scope, azure_token):
 
     response = requests.post(url=uri, json=body, headers=headers)
     # will return 202 or error
+    assert response.status_code == 202, f"Error creating {app_type} app. Response: {response.text}"
     print(response.text)
 
 # GET APP PROXY URL FROM LEO

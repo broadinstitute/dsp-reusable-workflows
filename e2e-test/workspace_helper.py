@@ -23,7 +23,7 @@ def create_workspace(billing_project_name, azure_token, rawls_url, workspace_nam
     }
 
     workspace_response = requests.post(url=rawls_workspace_api, json=request_body, headers=header)
-    assert workspace_response.status_code == 201, f"Error creating workspace: ${workspace_response.text}"
+    assert workspace_response.status_code == 201, f"Error creating workspace: {workspace_response.text}"
 
     # example json that is returned by request:
     # {
