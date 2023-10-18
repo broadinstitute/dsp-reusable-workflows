@@ -172,7 +172,7 @@ def check_submission_status(cbas_url, method_id, run_set_id):
         logging.error(f"Submission '{run_set_id}' not in 'COMPLETE' state. Current state: {response['run_sets'][0]['state']}.")
         exit(1)
 
-    logging.info(f"Submission '{run_set_id}' status: COMPLETE.")
+    logging.info(f"Submission '{run_set_id}' status: COMPLETE")
 
 
 # ---------------------- Start Workflows Azure E2E test ----------------------
@@ -234,8 +234,8 @@ logging.info("Checking submission status...")
 check_submission_status(cbas_url, method_id, run_set_id)
 
 # delete workspace and apps
-# TODO: Enable workspace deletion check after bug https://broadworkbench.atlassian.net/browse/WOR-1309 is complete
-logging.info("Starting workspace deletion...")
-delete_workspace(billing_project_name, workspace_name, rawls_url, azure_token)
+# TODO: Enable workspace deletion check after bug https://broadworkbench.atlassian.net/browse/WOR-1309 is fixed
+# logging.info("Starting workspace deletion...")
+# delete_workspace(billing_project_name, workspace_name, rawls_url, azure_token)
 
 logging.info("Test successfully completed. Exiting.")
