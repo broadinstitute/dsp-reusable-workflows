@@ -1,4 +1,4 @@
-from workspace_helper import create_workspace
+from workspace_helper import create_workspace, delete_workspace
 from app_helper import create_app, poll_for_app_url
 import requests
 import os
@@ -22,9 +22,8 @@ leo_url = f"https://leonardo.{bee_name}.bee.envs-terra.bio"
 # Upload data to WDS using APIs
 def upload_wds_data_using_api(wds_url, workspace_id, tsv_file_name, record_name):
     #open TSV file in read mode
-    tsv_file = open(tsv_file_name, "r")
-    request_file = tsv_file.read()
-    tsv_file.close()
+    with open(tsv_file_name) as tsv_file:
+        request_file = tsv_file.read()
 
     uri = f"{wds_url}/{workspace_id}/tsv/v0.2/{record_name}"
     headers = {"Authorization": f"Bearer {azure_token}"}
@@ -63,7 +62,7 @@ def create_cbas_method(cbas_url, workspace_id):
     if status_code != 200:
         print(response.text)
         exit(1)
-    print(f"Successfully created method {method_name} for workspace {workspace_id}")
+    print(f"\nSuccessfully created method {method_name} for workspace {workspace_id}")
     response = json.loads(response.text)
 
     return response['method_id']
@@ -100,9 +99,8 @@ def submit_no_tasks_workflow(cbas_url, method_version_id):
     }
 
     #open text file in read mode
-    request_body_file = open("e2e-test/resources/cbas/submit_workflow_body.json", "r")
-    request_body = request_body_file.read().replace("{METHOD_VERSION_ID}", method_version_id)
-    request_body_file.close()
+    with open("e2e-test/resources/cbas/submit_workflow_body.json") as request_body_file:
+        request_body = request_body_file.read().replace("{METHOD_VERSION_ID}", method_version_id)
 
     print(f"Submitting workflow to CBAS...")
 
@@ -190,11 +188,18 @@ if wds_url == "":
     exit(1)
 upload_wds_data_using_api(wds_url, workspace_id, "e2e-test/resources/cbas/cbas-e2e-test-data.tsv", "test-data")
 
-# Submit workflow to CBAS; if not exit the test after 10 minutes of polling
-print(f"\nChecking to see if WORKFLOWS app is ready to submit workflow in workspace {workspace_id}...")
+# check that CBAS is ready; if not exit the test after 10 minutes of polling
+print(f"\nChecking to see if WORKFLOWS app is ready in workspace {workspace_id}...")
 cbas_url = poll_for_app_url(workspace_id, 'WORKFLOWS_APP', 'cbas', azure_token, leo_url)
 if cbas_url == "":
     print(f"WORKFLOWS app not ready or errored out for workspace {workspace_id}")
+    exit(1)
+
+# check that Cromwell Runner is ready; if not exit the test after 10 minutes of polling
+print(f"\nChecking to see if CROMWELL_RUNNER app is ready in workspace {workspace_id}...")
+cromwell_url = poll_for_app_url(workspace_id, 'CROMWELL_RUNNER_APP', 'cromwell-runner', azure_token, leo_url)
+if cromwell_url == "":
+    print(f"CROMWELL_RUNNER app not ready or errored out for workspace {workspace_id}")
     exit(1)
 
 # create a new method
@@ -216,5 +221,10 @@ check_outputs_data(wds_url, workspace_id, 'test-data', '89P13')
 # check submission status
 print("\nChecking submission status...")
 check_submission_status(cbas_url, method_id, run_set_id)
+
+# delete workspace and apps
+# TODO: Enable workspace deletion check after bug https://broadworkbench.atlassian.net/browse/WOR-1309 is complete
+print("Starting workspace deletion...")
+delete_workspace(billing_project_name, workspace_name, rawls_url, azure_token)
 
 print("\nTest successfully completed. Exiting.")
