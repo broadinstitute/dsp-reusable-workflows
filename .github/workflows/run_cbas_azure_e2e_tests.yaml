@@ -19,7 +19,7 @@ jobs:
       - name: "Checkout dsp-reusable-workflows"
         uses: actions/checkout@v3
         with:
-          ref: sps_cbas_e2e_test #TODO: switch to main
+          ref: main
           repository: broadinstitute/dsp-reusable-workflows
           path: dsp-reusable-workflows/
       - name: Set up python

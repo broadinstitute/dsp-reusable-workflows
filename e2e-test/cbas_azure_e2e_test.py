@@ -52,11 +52,10 @@ def upload_wds_data_using_api(wds_url, workspace_id, tsv_file_name, record_name)
 # Create no-tasks-workflow method in CBAS
 def create_cbas_method(cbas_url, workspace_id):
     method_name = "no-tasks-workflow"
-    #TODO: change branch to main
     request_body = {
         "method_name": method_name,
         "method_source": "GitHub",
-        "method_url": "https://raw.githubusercontent.com/broadinstitute/dsp-reusable-workflows/sps_cbas_e2e_test/e2e-test/resources/cbas/no-tasks-workflow.wdl",
+        "method_url": "https://raw.githubusercontent.com/broadinstitute/dsp-reusable-workflows/main/e2e-test/resources/cbas/no-tasks-workflow.wdl",
         "method_version": "develop"
     }
 
