@@ -56,4 +56,3 @@ jobs:
         run: |
           cd dsp-reusable-workflows/
           python e2e-test/cromwell_azure_e2e_test.py
-          

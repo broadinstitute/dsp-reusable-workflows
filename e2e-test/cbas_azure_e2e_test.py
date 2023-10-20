@@ -125,6 +125,7 @@ def submit_no_tasks_workflow(cbas_url, method_version_id):
     response = json.loads(response.text)
     return response['run_set_id']
 
+
 # Poll to check if outputs were written back to WDS for given record
 def poll_for_outputs_data(wds_url, workspace_id, record_type, record_name):
     wds_records_url = f"{wds_url}/{workspace_id}/records/v0.2/{record_type}/{record_name}"

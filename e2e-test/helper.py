@@ -1,14 +1,11 @@
 from workspace_helper import create_workspace
 from app_helper import poll_for_app_url
-import json
 import uuid
 import random
 import string
 import wds_client
 import requests
-import time
 import logging
-import os
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -136,52 +133,3 @@ def check_wds_data(wds_url, workspaceId, recordName, azure_token):
     response = schema_client.describe_record_type(workspaceId, version, recordName);
     assert response.name == recordName, "Name does not match"
     assert response.count == 2504, "Count does not match"
-
-
-def output_message(msg, type=None):
-    current_time = time.strftime("%H:%M:%S", time.localtime())
-    msg = f'{current_time} - {msg}'
-    if type == 'DEBUG':
-        logging.debug(msg)
-    elif type == 'ERROR':
-        logging.error(msg)
-    else:
-        logging.info(msg)
-
-def handle_failed_request(response, msg, status_code=200):
-    if(response.status_code != status_code):
-        raise Exception(f'{response.status_code} - {msg}\n{response.text}')
-
-def delete_workspace(workspace_namespace, workspace_name, bearer_token):
-    if workspace_namespace and workspace_name:
-        delete_workspace_url = f"{rawls_url}/api/workspaces/v2/{workspace_namespace}/{workspace_name}"
-        headers = {"Authorization": f'Bearer {bearer_token}',
-                   "accept": "application/json"}
-        # First call to initiate workspace deletion
-        response = requests.delete(url=delete_workspace_url, headers=headers)
-        output_message(response.text, "DEBUG")                              
-        handle_failed_request(response, f"Error deleting workspace {workspace_name} - {workspace_namespace}", 202)
-        output_message(f"Workspace {workspace_name} - {workspace_namespace} delete request submitted")
-       
-        # polling to ensure that workspace is deleted (which takes about 5ish minutes)
-        is_workspace_deleted = False
-        token_expired = False
-        while not is_workspace_deleted and not token_expired:
-            time.sleep(2 * 60)
-            get_workspace_url = f"{rawls_url}/api/workspaces/{workspace_namespace}/{workspace_name}"
-            polling_response = requests.get(url=get_workspace_url, headers=headers)
-            polling_status_code = polling_response.status_code
-            output_message(f"Polling GET WORKSPACE - {polling_status_code}")
-            if polling_status_code == 200:
-                output_message(f"Workspace {workspace_name} - {workspace_namespace} is still active")
-            elif polling_status_code == 404:
-                is_workspace_deleted = True
-                output_message(f"Workspace {workspace_name} - {workspace_namespace} is deleted")
-            elif polling_status_code == 401:
-                token_expired = True
-            else:
-                output_message(f"Unexpected status code {polling_status_code} received\n{polling_response.text}", "ERROR")
-                raise Exception(polling_response.text)
-        if token_expired:
-            raise Exception(f"Workspace {workspace_name} was not deleted within bearer token lifespan")
-        
