@@ -1,16 +1,20 @@
 import requests
+import logging
 import os
-import json
-import random
-import string
-import uuid
 import time
 from collections import deque
-import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
-from helper import output_message, handle_failed_request
 from workspace_helper import create_workspace, delete_workspace
 from app_helper import create_app, poll_for_app_url
+
+# configure logging format
+LOG_FORMAT = "%(asctime)s %(levelname)-8s %(message)s"
+LOG_LEVEL = "INFO"
+LOG_DATEFORMAT = "%Y-%m-%d %H:%M:%S"
+logging.basicConfig(
+    format=LOG_FORMAT,
+    level=getattr(logging, LOG_LEVEL),
+    datefmt=LOG_DATEFORMAT,
+)
 
 bearer_token = os.environ['BEARER_TOKEN']
 bee_name = os.environ['BEE_NAME']
@@ -36,18 +40,22 @@ def submit_hello_world_to_cromwell(app_url, workflow_test_name):
                 'workflowTypeVersion': '1.0'
             }
             response = requests.post(workflow_endpoint, headers=headers, files=files)
-            handle_failed_request(response, f"Error submitting workflow to Cromwell for {workflow_test_name}", 201)
-            output_message(response.json(), "DEBUG")
+            if(response.status_code != 201):
+                msg = f"Error submitting workflow to Cromwell for {workflow_test_name}"
+                raise Exception(f'{response.status_code} - {msg}\n{response.text}')
+            logging.debug(response.json(), "DEBUG")
             return response.json()
         
 def get_workflow_information(app_url, workflow_id, bearer_token):
     workflow_endpoint = f'{app_url}/api/workflows/v1/{workflow_id}/status'
     headers = {"Authorization": f'Bearer {bearer_token}',
               "accept": "application/json"}
-    output_message(f"Fetching workflow status for {workflow_id}")
+    logging.info(f"Fetching workflow status for {workflow_id}")
     response = requests.get(workflow_endpoint, headers=headers)
-    handle_failed_request(response, f"Error fetching workflow metadata for {workflow_id}")
-    output_message(response.json(), "DEBUG")
+    if(response.status_code != 200):
+        msg = f"Error fetching workflow metadata for {workflow_id}"
+        raise Exception(f'{response.status_code} - {msg}\n{response.text}')
+    logging.debug(response.json(), "DEBUG")
     return response.json()
 
 # workflow_ids is a deque of workflow ids
@@ -67,32 +75,32 @@ def get_completed_workflow(app_url, workflow_ids, max_retries=4, sleep_timer=60 
         if(workflow_status in throw_exception_statuses):
             raise Exception(f"Exception raised: Workflow {workflow_id} reporting {workflow_status} status")
         if workflow_status in success_statuses:
-            output_message(f"{workflow_id} finished running. Status: {workflow_metadata['status']}")
+            logging.info(f"{workflow_id} finished running. Status: {workflow_metadata['status']}")
         else:
             workflow_ids.appendleft(workflow_id)
             current_running_workflow_count += 1
         if current_running_workflow_count == len(workflow_ids):
             if current_running_workflow_count == 0:
-                output_message("Workflow(s) finished running")
+                logging.info("Workflow(s) finished running")
             else:
                 # Reset current count to 0 for next retry
                 # Decrement max_retries by 1
                 # Wait for sleep_timer before checking workflow statuses again (adjust value as needed)
-                output_message(f"These workflows have yet to return a completed status: [{', '.join(workflow_ids)}]")
+                logging.info(f"These workflows have yet to return a completed status: [{', '.join(workflow_ids)}]")
                 max_retries -= 1
                 current_running_workflow_count = 0
                 time.sleep(sleep_timer)
-    output_message("Workflow(s) submission and completion successful")
+    logging.info("Workflow(s) submission and completion successful")
         
 def test_cleanup(workspace_namespace, workspace_name):
     try:
         delete_workspace(workspace_namespace, workspace_name, rawls_url, bearer_token)
-        output_message("Workspace cleanup complete")
+        logging.info("Workspace cleanup complete")
     # Catch the exeception and continue with the test since we don't want cleanup to affect the test results
     # We can assume that Janitor will clean up the workspace if the test fails
     except Exception as e:
-        output_message("Error cleaning up workspace, test script will continue")
-        output_message(f'Exception details below:\n{e}')
+        logging.info("Error cleaning up workspace, test script will continue")
+        logging.info(f'Exception details below:\n{e}')
 
 def main():
     workspace_name = ""
@@ -116,7 +124,7 @@ def main():
         # This chunk of code only executes one workflow
         # Would like to modify this down the road to execute and store references for multiple workflows
         workflow_response = submit_hello_world_to_cromwell(app_url, "Run Workflow Test")
-        output_message(f'Executing sleep for {workflow_run_sleep_timer} seconds to allow workflow(s) to complete')
+        logging.info(f'Executing sleep for {workflow_run_sleep_timer} seconds to allow workflow(s) to complete')
         time.sleep(workflow_run_sleep_timer)
 
         # This chunk of code supports checking one or more workflows
@@ -124,13 +132,13 @@ def main():
         workflow_ids = deque([workflow_response['id']])
         get_completed_workflow(app_url, workflow_ids, sleep_timer=workflow_status_sleep_timer)
     except Exception as e:
-        output_message(f"Exception occured during test:\n{e}")
+        logging.info(f"Exception occured during test:\n{e}")
         found_exception = True
     finally:
         test_cleanup(billing_project_name, workspace_name)
         # Use exit(1) so that GHA will fail if an exception was found during the test
         if(found_exception):
-            output_message("Workflow test failed due to exception(s)", "ERROR")
+            logging.error("Workflow test failed due to exception(s)", "ERROR")
             exit(1)
 
 if __name__ == "__main__":
