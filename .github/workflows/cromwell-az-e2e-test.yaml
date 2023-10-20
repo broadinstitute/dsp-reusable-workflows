@@ -1,7 +1,7 @@
 name: cromwell-az-e2e-test
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs: 
       branch:
         description: 'Branch to run tests on'
