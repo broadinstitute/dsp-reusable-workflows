@@ -51,7 +51,7 @@ jobs:
       - name: Run e2e test
         env:
           BEE_NAME: ${{inputs.bee-name}}
-          BILLING_PROJECT_NAME: ${{inputs.project-name}}
+          BILLING_PROJECT_NAME: ${{inputs.billing-project-name}}
           BEARER_TOKEN: ${{ steps.obtain_token.outputs.access_token }}
         run: |
           cd dsp-reusable-workflows/
