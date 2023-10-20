@@ -33,20 +33,20 @@ def create_workspace():
    create_workspace_data = json.loads(json.dumps(create_workspace_response))
    workspace_id = create_workspace_data['workspaceId']
 
-   output_message(f"Enabling CBAS for workspace {workspace_id}")
-   activate_cbas_request = f"{leo_url}/api/apps/v2/{workspace_id}/terra-app-{str(uuid.uuid4())}"
-   cbas_request_body = {
-      "appType": "CROMWELL"
+   output_message(f"Enabling Cromwell for workspace {workspace_id}")
+   activate_cromwell_request = f"{leo_url}/api/apps/v2/{workspace_id}/terra-app-{str(uuid.uuid4())}"
+   cromwell_request_body = {
+      "appType": "CROMWELL_RUNNER"
    } 
         
-   response = requests.post(url=activate_cbas_request, json=cbas_request_body, 
+   response = requests.post(url=activate_cromwell_request, json=cromwell_request_body, 
                             headers={"Authorization": f"Bearer {bearer_token}"})
    # will return 202 or error
-   handle_failed_request(response, "Error activating CBAS", 202)
-   output_message("CBAS successfully activated")
+   handle_failed_request(response, "Error activating Cromwell", 202)
+   output_message("Cromwell successfully activated")
    return create_workspace_data
 
-# GET WDS OR CROMWELL ENDPOINT URL FROM LEO
+# GET CROMWELL ENDPOINT URL FROM LEO
 def get_app_url(workspaceId, app):
     uri = f"{leo_url}/api/apps/v2/{workspaceId}?includeDeleted=false"
 
@@ -60,7 +60,7 @@ def get_app_url(workspaceId, app):
     response = response.json()
 
     app_url = ""
-    app_type = "CROMWELL" if app != 'wds' else app.upper()
+    app_type = "CROMWELL_RUNNER" if app != 'wds' else app.upper()
     output_message(f"App type: {app_type}")
     for entries in response: 
         if entries['appType'] == app_type and entries['proxyUrls'][app] is not None:
