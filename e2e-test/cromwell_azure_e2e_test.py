@@ -43,7 +43,7 @@ def submit_hello_world_to_cromwell(app_url, workflow_test_name):
             if(response.status_code != 201):
                 msg = f"Error submitting workflow to Cromwell for {workflow_test_name}"
                 raise Exception(f'{response.status_code} - {msg}\n{response.text}')
-            logging.debug(response.json(), "DEBUG")
+            logging.debug(response.json())
             return response.json()
         
 def get_workflow_information(app_url, workflow_id, bearer_token):
@@ -55,7 +55,7 @@ def get_workflow_information(app_url, workflow_id, bearer_token):
     if(response.status_code != 200):
         msg = f"Error fetching workflow metadata for {workflow_id}"
         raise Exception(f'{response.status_code} - {msg}\n{response.text}')
-    logging.debug(response.json(), "DEBUG")
+    logging.debug(response.json())
     return response.json()
 
 # workflow_ids is a deque of workflow ids
@@ -138,7 +138,7 @@ def main():
         test_cleanup(billing_project_name, workspace_name)
         # Use exit(1) so that GHA will fail if an exception was found during the test
         if(found_exception):
-            logging.error("Workflow test failed due to exception(s)", "ERROR")
+            logging.error("Workflow test failed due to exception(s)")
             exit(1)
 
 if __name__ == "__main__":
