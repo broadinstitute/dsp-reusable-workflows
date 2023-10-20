@@ -8,12 +8,8 @@ on:
         default: main
         required: true
         type: string
-      project-name:
+      billing-project-name:
         description: 'Project name to be used for namespace designation'
-        required: true
-        type: string
-      bearer-token:
-        description: 'Bearer token for owner auth'
         required: true
         type: string
       bee-name:
@@ -24,9 +20,6 @@ on:
 jobs:
   run-cromwell-az-e2e:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./e2e-test/cromwell_az_e2e_test
     permissions:
       contents: 'read'
       id-token: 'write'
@@ -39,16 +32,26 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-      - name: Install poetry
-        uses: snok/install-poetry@v1
       - name: Install dependencies
         run: |
-          poetry install --no-interaction     
+          cd dsp-reusable-workflows/e2e-test/resources/cromwell/
+          pip install -r requirements.txt
+      - name: Generate OAuth2 2.0 access token for owner
+        id: 'obtain_token'
+        uses: google-github-actions/auth@v1
+        with:
+          token_format: 'access_token'
+          workload_identity_provider: 'projects/1038484894585/locations/global/workloadIdentityPools/github-wi-pool/providers/github-wi-provider'
+          service_account: 'firecloud-qa@broad-dsde-qa.iam.gserviceaccount.com'
+          access_token_scopes: 'profile, email, openid'
+          access_token_subject: 'hermione.owner@quality.firecloud.org'
+          export_environment_variables: false
       - name: Run e2e test
         env:
-          POETRY_BEE_NAME: ${{inputs.bee-name}}
-          POETRY_BILLING_PROJECT_NAME: ${{inputs.project-name}}
-          POETRY_BEARER_TOKEN: ${{ inputs.bearer-token }}
+          BEE_NAME: ${{inputs.bee-name}}
+          BILLING_PROJECT_NAME: ${{inputs.project-name}}
+          BEARER_TOKEN: ${{ steps.obtain_token.outputs.access_token }}
         run: |
-          poetry run start
+          cd dsp-reusable-workflows/
+          python e2e-test/cromwell_azure_e2e_test.py
           

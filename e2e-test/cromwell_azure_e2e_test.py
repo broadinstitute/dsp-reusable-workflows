@@ -10,10 +10,9 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from helper import get_completed_workflow, submit_hello_world_to_cromwell, delete_workspace, output_message, handle_failed_request
 
-# NOTE: POETRY prefix is outlined per documentation here: https://python-poetry.org/docs/configuration#using-environment-variables
-bearer_token = os.environ['POETRY_BEARER_TOKEN']
-bee_name = os.environ['POETRY_BEE_NAME']
-billing_project_name = os.environ['POETRY_BILLING_PROJECT_NAME']
+bearer_token = os.environ['BEARER_TOKEN']
+bee_name = os.environ['BEE_NAME']
+billing_project_name = os.environ['BILLING_PROJECT_NAME']
 
 rawls_url = f"https://rawls.{bee_name}.bee.envs-terra.bio"
 leo_url = f"https://leonardo.{bee_name}.bee.envs-terra.bio"
@@ -88,7 +87,7 @@ def test_cleanup(workspace_namespace, workspace_name):
         output_message("Error cleaning up workspace, test script will continue")
         output_message(f'Exception details below:\n{e}')
 
-def start():
+def main():
     workspace_namespace = ""
     workspace_name = ""
     workspace_id = ""
@@ -126,3 +125,6 @@ def start():
         if(found_exception):
             output_message("Workflow test failed due to exception(s)", "ERROR")
             exit(1)
+
+if __name__ == "__main__":
+    main()
