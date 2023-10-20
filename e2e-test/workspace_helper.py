@@ -13,6 +13,7 @@ def create_workspace(billing_project_name, azure_token, rawls_url, workspace_nam
     # create a new workspace, need to have attributes or api call doesnt work
     rawls_workspace_api = f"{rawls_url}/api/workspaces"
     workspace_name = workspace_name if workspace_name else f"e2e-test-api-workspace-{''.join(random.choices(string.ascii_lowercase, k=5))}"
+    logging.info(f"Creating workspace {workspace_name} in {billing_project_name}")
     request_body= {
         "namespace": billing_project_name,
         "name": workspace_name,
@@ -81,16 +82,13 @@ def delete_workspace(billing_project_name, workspace_name, rawls_url, azure_toke
             logging.info(f"Workspace '{workspace_name}' in billing project '{billing_project_name}' still exists. Sleeping for 30 seconds")
             time.sleep(30)
         elif status_code == 401:
-            logging.error(f"Azure token expired. Exiting.")
-            exit(1)
+            raise Exception(f"Azure token expired.")
         elif status_code == 404:
             logging.info(f"Workspace '{workspace_name}' in billing project '{billing_project_name}' deleted successfully")
             return
         else:
-            logging.error(f"Something went wrong while workspace deletion. Received status code {status_code}. Error: {response.text}")
-            exit(1)
+            raise Exception(f"Something went wrong while workspace deletion. Received status code {status_code}. Error: {response.text}")
 
         poll_count -= 1
 
-    logging.error(f"Workspace wasn't deleted within 10 minutes. Exiting with code 1.")
-    exit(1)
+    raise Exception(f"Workspace wasn't deleted within 10 minutes.")
