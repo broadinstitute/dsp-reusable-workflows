@@ -204,12 +204,24 @@ cbas_url = poll_for_app_url(workspace_id, 'WORKFLOWS_APP', 'cbas', azure_token, 
 if cbas_url == "":
     create_app(workspace_id, leo_url, 'WORKFLOWS_APP', 'WORKSPACE_SHARED', azure_token)
 
+# Since CROMWELL_RUNNER app needs the `cromwellmetadata` database available before it can be deployed,
+# wait for WORKFLOWS app to be in Running state before deploying CROMWELL_RUNNER app.
+# Check that CBAS is ready; if not exit the test after 10 minutes of polling
+logging.info(f"Polling to check if WORKFLOWS app is ready in workspace {workspace_id}...")
+cbas_url = poll_for_app_url(workspace_id, 'WORKFLOWS_APP', 'cbas', azure_token, leo_url)
+if cbas_url == "":
+    logging.error(f"WORKFLOWS app not ready or errored out for workspace {workspace_id}")
+    exit(1)
+
 # Create CROMWELL_RUNNER app in workspace
 create_app(workspace_id, leo_url, 'CROMWELL_RUNNER_APP', 'USER_PRIVATE', azure_token)
 
-# sleep for 5 minutes to allow workspace to provision and apps to start up
-logging.info("Sleeping for 5 minutes to allow workspace to provision and apps to start up...")
-time.sleep(5 * 60)
+# check that Cromwell Runner is ready; if not exit the test after 10 minutes of polling
+logging.info(f"Polling to check if CROMWELL_RUNNER app is ready in workspace {workspace_id}...")
+cromwell_url = poll_for_app_url(workspace_id, 'CROMWELL_RUNNER_APP', 'cromwell-runner', azure_token, leo_url)
+if cromwell_url == "":
+    logging.error(f"CROMWELL_RUNNER app not ready or errored out for workspace {workspace_id}")
+    exit(1)
 
 # check that WDS is ready; if not exit the test after 10 minutes of polling
 logging.info(f"Polling to check if WDS app is ready to upload data for workspace {workspace_id}...")
@@ -220,20 +232,6 @@ if wds_url == "":
 
 # upload data to workspace
 upload_wds_data_using_api(wds_url, workspace_id, "e2e-test/resources/cbas/cbas-e2e-test-data.tsv", "test-data")
-
-# check that CBAS is ready; if not exit the test after 10 minutes of polling
-logging.info(f"Polling to check if WORKFLOWS app is ready in workspace {workspace_id}...")
-cbas_url = poll_for_app_url(workspace_id, 'WORKFLOWS_APP', 'cbas', azure_token, leo_url)
-if cbas_url == "":
-    logging.error(f"WORKFLOWS app not ready or errored out for workspace {workspace_id}")
-    exit(1)
-
-# check that Cromwell Runner is ready; if not exit the test after 10 minutes of polling
-logging.info(f"Polling to check if CROMWELL_RUNNER app is ready in workspace {workspace_id}...")
-cromwell_url = poll_for_app_url(workspace_id, 'CROMWELL_RUNNER_APP', 'cromwell-runner', azure_token, leo_url)
-if cromwell_url == "":
-    logging.error(f"CROMWELL_RUNNER app not ready or errored out for workspace {workspace_id}")
-    exit(1)
 
 # create a new method
 method_id = create_cbas_method(cbas_url, workspace_id)
