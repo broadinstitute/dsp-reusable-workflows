@@ -15,7 +15,7 @@ test_cloning=False
 
 def run_workspace_app_test(cbas, wds_upload, cbas_submit_workflow, test_cloning):
 
-    setup(bee_name)
+    workspace_manager_url, rawls_url, leo_url = setup(bee_name)
     header = {"Authorization": "Bearer " + azure_token};
 
     # create the workspace
