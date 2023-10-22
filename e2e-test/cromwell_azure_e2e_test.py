@@ -121,6 +121,9 @@ def main():
         time.sleep(provision_sleep_timer) # Added an sleep here to give the workspace time to provision and app to start
         app_url = poll_for_app_url(workspace_id, 'CROMWELL_RUNNER_APP', 'cromwell-runner', bearer_token, leo_url)
 
+        if not app_url:
+            raise Exception("App URL could not be found.")
+
         # This chunk of code only executes one workflow
         # Would like to modify this down the road to execute and store references for multiple workflows
         workflow_response = submit_hello_world_to_cromwell(app_url, "Run Workflow Test")
