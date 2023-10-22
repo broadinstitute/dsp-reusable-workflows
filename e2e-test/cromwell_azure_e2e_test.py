@@ -108,17 +108,20 @@ def main():
     found_exception = False
     
     # Sleep timers for various steps in the test
-    inter_app_creation_timer = 60 * 1
     provision_sleep_timer = 60 * 5
     workflow_run_sleep_timer = 60 * 5
     workflow_status_sleep_timer = 60 * 2
     
     try:
         (workspace_id, workspace_name) = create_workspace(billing_project_name, bearer_token, rawls_url)
+
         create_app(workspace_id, leo_url, 'WORKFLOWS_APP', 'WORKSPACE_SHARED', bearer_token)
-        time.sleep(inter_app_creation_timer)
+        workflow_app_url = poll_for_app_url(workspace_id, 'WORKFLOWS_APP', 'cbas', bearer_token, leo_url)
+        
+        if not workflow_app_url:
+            raise Exception("Prerequisite workflow app URL could not be found.")
+        
         create_app(workspace_id, leo_url, 'CROMWELL_RUNNER_APP', 'USER_PRIVATE', bearer_token)
-        time.sleep(provision_sleep_timer) # Added an sleep here to give the workspace time to provision and app to start
         app_url = poll_for_app_url(workspace_id, 'CROMWELL_RUNNER_APP', 'cromwell-runner', bearer_token, leo_url)
 
         if not app_url:
