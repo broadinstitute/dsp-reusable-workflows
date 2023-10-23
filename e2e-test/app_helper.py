@@ -32,7 +32,7 @@ def poll_for_app_url(workspaceId, app_type, proxy_url_name, azure_token, leo_url
     }
 
     # prevent infinite loop
-    poll_count = 20 # 30s x 20 = 10 min
+    poll_count = 40 # 30s x 40 = 20 min
 
     while poll_count > 0:
         response = requests.get(leo_get_app_api, headers=headers)
