@@ -23,6 +23,15 @@ billing_project_name = os.environ['BILLING_PROJECT_NAME']
 rawls_url = f"https://rawls.{bee_name}.bee.envs-terra.bio"
 leo_url = f"https://leonardo.{bee_name}.bee.envs-terra.bio"
 
+def perform_get(endpoint):
+    headers = {"Authorization": f'Bearer {bearer_token}',
+              "accept": "application/json"}
+    response = requests.get(endpoint, headers=headers)
+    if(response.status_code != 200):
+        msg = f"Error response from {endpoint}"
+        raise Exception(f'{response.status_code} - {msg}\n{response.text}')
+    return response.json()
+
 def submit_hello_world_to_cromwell(app_url, workflow_test_name):
     absolute_file_path = os.path.dirname(__file__)
     workflow_source_path = os.path.join(absolute_file_path, './resources/cromwell/hello.wdl')
@@ -46,17 +55,15 @@ def submit_hello_world_to_cromwell(app_url, workflow_test_name):
             logging.debug(response.json())
             return response.json()
         
-def get_workflow_information(app_url, workflow_id, bearer_token):
+def get_workflow_status(app_url, workflow_id):
     workflow_endpoint = f'{app_url}/api/workflows/v1/{workflow_id}/status'
-    headers = {"Authorization": f'Bearer {bearer_token}',
-              "accept": "application/json"}
     logging.info(f"Fetching workflow status for {workflow_id}")
-    response = requests.get(workflow_endpoint, headers=headers)
-    if(response.status_code != 200):
-        msg = f"Error fetching workflow metadata for {workflow_id}"
-        raise Exception(f'{response.status_code} - {msg}\n{response.text}')
-    logging.debug(response.json())
-    return response.json()
+    return perform_get(workflow_endpoint)
+
+def get_workflow_metadata(app_url, workflow_id):
+    workflow_endpoint = f'{app_url}/api/workflows/v1/{workflow_id}/metadata'
+    logging.info(f"Fetching workflow metadata for {workflow_id}")
+    return perform_get(workflow_endpoint)
 
 # workflow_ids is a deque of workflow ids
 def get_completed_workflow(app_url, workflow_ids, max_retries=4, sleep_timer=60 * 2):
@@ -69,13 +76,15 @@ def get_completed_workflow(app_url, workflow_ids, max_retries=4, sleep_timer=60 
             raise Exception(f"Workflow(s) did not finish running within retry window ({max_retries} retries)")
         
         workflow_id = workflow_ids.pop()
-        workflow_metadata = get_workflow_information(app_url, workflow_id, bearer_token)
-        workflow_status = workflow_metadata['status']
+        workflow_status = get_workflow_status(app_url, workflow_id)
+        workflow_status = workflow_status['status']
 
         if(workflow_status in throw_exception_statuses):
+            metadata = get_workflow_metadata(app_url, workflow_id)
+            logging.info(metadata)
             raise Exception(f"Exception raised: Workflow {workflow_id} reporting {workflow_status} status")
         if workflow_status in success_statuses:
-            logging.info(f"{workflow_id} finished running. Status: {workflow_metadata['status']}")
+            logging.info(f"{workflow_id} finished running. Status: {workflow_status['status']}")
         else:
             workflow_ids.appendleft(workflow_id)
             current_running_workflow_count += 1
