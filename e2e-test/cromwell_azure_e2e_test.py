@@ -77,6 +77,7 @@ def get_completed_workflow(app_url, workflow_ids, max_retries=4, sleep_timer=60 
         
         workflow_id = workflow_ids.pop()
         workflow_status = get_workflow_status(app_url, workflow_id)
+        logging.info(f"Status response is: {workflow_status}")
         workflow_status = workflow_status['status']
 
         if(workflow_status in throw_exception_statuses):
