@@ -158,6 +158,7 @@ def poll_for_outputs_data(wds_url, workspace_id, record_type, record_name):
     logging.error(f"Outputs were not written back to WDS after polling for 10 minutes. Exiting with code 1.")
     exit(1)
 
+
 # Check submission is in COMPLETE state
 def check_submission_status(cbas_url, method_id, run_set_id):
     uri = f"{cbas_url}/api/batch/v1/run_sets?method_id={method_id}"
@@ -179,6 +180,19 @@ def check_submission_status(cbas_url, method_id, run_set_id):
         exit(1)
 
     logging.info(f"Submission '{run_set_id}' status: COMPLETE")
+
+
+def test_cleanup(workspace_name):
+    try:
+        delete_workspace(billing_project_name, workspace_name, rawls_url, azure_token)
+        logging.info("Workspace cleanup complete")
+    # Catch the exception and continue with the test since we don't want cleanup to affect the test results
+    # We can assume that Janitor will clean up the workspace if the test fails
+    # TODO: Instead of catching exception and continuing with test, the script should fail the test once
+    #       https://broadworkbench.atlassian.net/browse/WOR-1309 is fixed
+    except Exception as e:
+        logging.warn("Error cleaning up workspace, test script will continue")
+        logging.warn(f'Exception details below:\n{e}')
 
 
 # ---------------------- Start Workflows Azure E2E test ----------------------
@@ -254,8 +268,7 @@ logging.info("Checking submission status...")
 check_submission_status(cbas_url, method_id, run_set_id)
 
 # delete workspace and apps
-# TODO: Enable workspace deletion check after bug https://broadworkbench.atlassian.net/browse/WOR-1309 is fixed
-# logging.info("Starting workspace deletion...")
-# delete_workspace(billing_project_name, workspace_name, rawls_url, azure_token)
+logging.info("Starting workspace cleanup...")
+test_cleanup(workspace_name)
 
 logging.info("Test completed successfully.")
