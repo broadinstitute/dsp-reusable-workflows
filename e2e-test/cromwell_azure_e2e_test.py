@@ -100,12 +100,12 @@ def get_completed_workflow(app_url, workflow_ids, max_retries=4, sleep_timer=60 
             raise Exception(f"Workflow(s) did not finish running within retry window ({max_retries} retries)")
         
         workflow_id = workflow_ids.pop()
-        workflow_status = get_workflow_status(app_url, workflow_id)
+        workflow_status = get_workflow_status(app_url, workflow_id, bearer_token)
         logging.info(f"Status response is: {workflow_status}")
         workflow_status = workflow_status['status']
 
         if(workflow_status in throw_exception_statuses):
-            metadata = get_workflow_metadata(app_url, workflow_id)
+            metadata = get_workflow_metadata(app_url, workflow_id, bearer_token)
             logging.info(metadata)
             raise Exception(f"Exception raised: Workflow {workflow_id} reporting {workflow_status} status")
         if workflow_status in success_statuses:
