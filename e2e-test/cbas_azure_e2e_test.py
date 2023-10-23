@@ -191,7 +191,7 @@ def test_cleanup(workspace_name):
     # TODO: Instead of catching exception and continuing with test, the script should fail the test once
     #       https://broadworkbench.atlassian.net/browse/WOR-1309 is fixed
     except Exception as e:
-        logging.warn(f"Error cleaning up workspace, test script will continue. Error details below:\n{e}')
+        logging.warn(f"Error cleaning up workspace, test script will continue. Error details: {e}")
 
 
 # ---------------------- Start Workflows Azure E2E test ----------------------
