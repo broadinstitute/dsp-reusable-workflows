@@ -55,15 +55,39 @@ def submit_hello_world_to_cromwell(app_url, workflow_test_name):
             logging.debug(response.json())
             return response.json()
         
-def get_workflow_status(app_url, workflow_id):
-    workflow_endpoint = f'{app_url}/api/workflows/v1/{workflow_id}/status'
-    logging.info(f"Fetching workflow status for {workflow_id}")
-    return perform_get(workflow_endpoint)
+# def get_workflow_status(app_url, workflow_id):
+#     workflow_endpoint = f'{app_url}/api/workflows/v1/{workflow_id}/status'
+#     logging.info(f"Fetching workflow status for {workflow_id}")
+#     return perform_get(workflow_endpoint)
 
-def get_workflow_metadata(app_url, workflow_id):
+# def get_workflow_metadata(app_url, workflow_id):
+#     workflow_endpoint = f'{app_url}/api/workflows/v1/{workflow_id}/metadata'
+#     logging.info(f"Fetching workflow metadata for {workflow_id}")
+#     return perform_get(workflow_endpoint)
+
+def get_workflow_status(app_url, workflow_id, bearer_token):
+    workflow_endpoint = f'{app_url}/api/workflows/v1/{workflow_id}/status'
+    headers = {"Authorization": f'Bearer {bearer_token}',
+              "accept": "application/json"}
+    logging.info(f"Fetching workflow status for {workflow_id}")
+    response = requests.get(workflow_endpoint, headers=headers)
+    if(response.status_code != 200):
+        msg = f"Error fetching workflow metadata for {workflow_id}"
+        raise Exception(f'{response.status_code} - {msg}\n{response.text}')
+    logging.debug(response.json())
+    return response.json()
+
+def get_workflow_metadata(app_url, workflow_id, bearer_token):
     workflow_endpoint = f'{app_url}/api/workflows/v1/{workflow_id}/metadata'
+    headers = {"Authorization": f'Bearer {bearer_token}',
+              "accept": "application/json"}
     logging.info(f"Fetching workflow metadata for {workflow_id}")
-    return perform_get(workflow_endpoint)
+    response = requests.get(workflow_endpoint, headers=headers)
+    if(response.status_code != 200):
+        msg = f"Error fetching workflow metadata for {workflow_id}"
+        raise Exception(f'{response.status_code} - {msg}\n{response.text}')
+    logging.debug(response.json())
+    return response.json()
 
 # workflow_ids is a deque of workflow ids
 def get_completed_workflow(app_url, workflow_ids, max_retries=4, sleep_timer=60 * 2):
