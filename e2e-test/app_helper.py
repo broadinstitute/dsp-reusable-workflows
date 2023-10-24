@@ -41,7 +41,8 @@ def poll_for_app_url(workspaceId, app_type, proxy_url_name, azure_token, leo_url
 
     while poll_count > 0:
         response = requests.get(leo_get_app_api, headers=headers)
-        assert response.status_code == 200, f"Error fetching apps from Leo: ${response.text}"
+        if response.status_code != 200:
+            raise Exception(f"Error fetching apps from Leo: ${response.text}")
         response = json.loads(response.text)
 
         # Don't run in an infinite loop if you forgot to start the app/it was never created
