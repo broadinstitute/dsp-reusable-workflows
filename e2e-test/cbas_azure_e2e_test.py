@@ -44,8 +44,8 @@ def upload_wds_data_using_api(wds_url, workspace_id, tsv_file_name, record_name)
     status_code = response.status_code
 
     if status_code != 200:
-        logging.error(response.text)
-        exit(1)
+        raise Exception(response.text)
+
     logging.info(f"Successfully uploaded data to WDS. Response: {response.json()}")
 
 
@@ -70,8 +70,8 @@ def create_cbas_method(cbas_url, workspace_id):
     status_code = response.status_code
 
     if status_code != 200:
-        logging.error(response.text)
-        exit(1)
+        raise Exception(response.text)
+
     logging.info(f"Successfully created method {method_name} for workspace {workspace_id}")
     response = json.loads(response.text)
 
@@ -90,8 +90,8 @@ def get_method_version_id(cbas_url, method_id):
     status_code = response.status_code
 
     if status_code != 200:
-        logging.error(response.text)
-        exit(1)
+        raise Exception(response.text)
+
     logging.info(f"Successfully retrieved method details for method ID {method_id}")
     response = json.loads(response.text)
 
@@ -118,8 +118,8 @@ def submit_no_tasks_workflow(cbas_url, method_version_id):
 
     status_code = response.status_code
     if status_code != 200:
-        logging.error(response.text)
-        exit(1)
+        raise Exception(response.text)
+
     logging.info(f"Successfully submitted workflow. Response: {response.json()}")
 
     response = json.loads(response.text)
@@ -138,8 +138,7 @@ def poll_for_outputs_data(wds_url, workspace_id, record_type, record_name):
     while poll_count > 0:
         response = requests.get(wds_records_url, headers=headers)
         if response.status_code != 200:
-            logging.error(f"Error fetching details for record '{record_name}' of type '{record_type}'. Error: {response.text}")
-            exit(1)
+            raise Exception(f"Error fetching details for record '{record_name}' of type '{record_type}'. Error: {response.text}")
 
         logging.info(f"Successfully retrieved details for record '{record_name}' of type '{record_type}'")
 
@@ -155,8 +154,7 @@ def poll_for_outputs_data(wds_url, workspace_id, record_type, record_name):
 
         poll_count -= 1
 
-    logging.error(f"Outputs were not written back to WDS after polling for 10 minutes. Exiting with code 1.")
-    exit(1)
+    raise Exception(f"Outputs were not written back to WDS after polling for 10 minutes")
 
 
 # Check submission is in COMPLETE state
@@ -171,13 +169,11 @@ def check_submission_status(cbas_url, method_id, run_set_id):
     status_code = response.status_code
 
     if status_code != 200:
-        logging.error(response.text)
-        exit(1)
+        raise Exception(response.text)
 
     response = json.loads(response.text)
     if response['run_sets'][0]['state'] != 'COMPLETE':
-        logging.error(f"Submission '{run_set_id}' not in 'COMPLETE' state. Current state: {response['run_sets'][0]['state']}.")
-        exit(1)
+        raise Exception(f"Submission '{run_set_id}' not in 'COMPLETE' state. Current state: {response['run_sets'][0]['state']}.")
 
     logging.info(f"Submission '{run_set_id}' status: COMPLETE")
 
@@ -191,83 +187,90 @@ def test_cleanup(workspace_name):
     # TODO: Instead of catching exception and continuing with test, the script should fail the test once
     #       https://broadworkbench.atlassian.net/browse/WOR-1309 is fixed
     except Exception as e:
-        logging.warn(f"Error cleaning up workspace, test script will continue. Error details: {e}")
+        logging.warning(f"Error cleaning up workspace, test script will continue. Error details: {e}")
 
 
 # ---------------------- Start Workflows Azure E2E test ----------------------
-logging.info("Starting Workflows Azure E2E test...")
+found_exception = False
+try:
+    logging.info("Starting Workflows Azure E2E test...")
 
-# Create workspace
-logging.info("Creating workspace...")
-workspace_id, workspace_name = create_workspace(billing_project_name, azure_token, rawls_url)
+    # Create workspace
+    logging.info("Creating workspace...")
+    workspace_id, workspace_name = create_workspace(billing_project_name, azure_token, rawls_url)
 
-# sleep for 1 minute to allow apps that auto-launch to start provisioning
-logging.info("Sleeping for 1 minute to allow apps that auto-launch to start provisioning...")
-time.sleep(60)
+    # sleep for 1 minute to allow apps that auto-launch to start provisioning
+    logging.info("Sleeping for 1 minute to allow apps that auto-launch to start provisioning...")
+    time.sleep(60)
 
-# After "Multi-user Workflow: Auto app start up" phase is completed, WORKFLOWS_APP will be launched
-# automatically at workspace creation time (similar to WDS). So to prevent test failures and errors
-# (until script is updated) when the code for that phase is released in dev, we check here if the WORKFLOWS_APP
-# is already deployed before manually creating it. `poll_for_app_url` before starting to poll checks & returns
-# "" if the app was never deployed
-# Note: After "Multi-user Workflow: Auto app start up" phase is completed, update the script and remove
-#       these 4 lines as we already poll for CBAS proxy url down below
-logging.info("Checking to see if WORKFLOWS_APP was deployed...")
-cbas_url = poll_for_app_url(workspace_id, 'WORKFLOWS_APP', 'cbas', azure_token, leo_url)
-if cbas_url == "":
-    create_app(workspace_id, leo_url, 'WORKFLOWS_APP', 'WORKSPACE_SHARED', azure_token)
+    # After "Multi-user Workflow: Auto app start up" phase is completed, WORKFLOWS_APP will be launched
+    # automatically at workspace creation time (similar to WDS). So to prevent test failures and errors
+    # (until script is updated) when the code for that phase is released in dev, we check here if the WORKFLOWS_APP
+    # is already deployed before manually creating it. `poll_for_app_url` before starting to poll checks & returns
+    # "" if the app was never deployed
+    # Note: After "Multi-user Workflow: Auto app start up" phase is completed, update the script and remove
+    #       these 4 lines as we already poll for CBAS proxy url down below
+    logging.info("Checking to see if WORKFLOWS_APP was deployed...")
+    cbas_url = poll_for_app_url(workspace_id, 'WORKFLOWS_APP', 'cbas', azure_token, leo_url)
+    if cbas_url == "":
+        create_app(workspace_id, leo_url, 'WORKFLOWS_APP', 'WORKSPACE_SHARED', azure_token)
 
-# Since CROMWELL_RUNNER app needs the `cromwellmetadata` database available before it can be deployed,
-# wait for WORKFLOWS app to be in Running state before deploying CROMWELL_RUNNER app.
-# Check that CBAS is ready; if not exit the test after 10 minutes of polling
-logging.info(f"Polling to check if WORKFLOWS app is ready in workspace {workspace_id}...")
-cbas_url = poll_for_app_url(workspace_id, 'WORKFLOWS_APP', 'cbas', azure_token, leo_url)
-if cbas_url == "":
-    logging.error(f"WORKFLOWS app not ready or errored out for workspace {workspace_id}")
-    exit(1)
+    # Since CROMWELL_RUNNER app needs the `cromwellmetadata` database available before it can be deployed,
+    # wait for WORKFLOWS app to be in Running state before deploying CROMWELL_RUNNER app.
+    # Check that CBAS is ready; if not fail the test after 10 minutes of polling
+    logging.info(f"Polling to check if WORKFLOWS app is ready in workspace {workspace_id}...")
+    cbas_url = poll_for_app_url(workspace_id, 'WORKFLOWS_APP', 'cbas', azure_token, leo_url)
+    if cbas_url == "":
+        raise Exception(f"WORKFLOWS app not ready or errored out for workspace {workspace_id}")
 
-# Create CROMWELL_RUNNER app in workspace
-create_app(workspace_id, leo_url, 'CROMWELL_RUNNER_APP', 'USER_PRIVATE', azure_token)
+    # Create CROMWELL_RUNNER app in workspace
+    create_app(workspace_id, leo_url, 'CROMWELL_RUNNER_APP', 'USER_PRIVATE', azure_token)
 
-# check that Cromwell Runner is ready; if not exit the test after 10 minutes of polling
-logging.info(f"Polling to check if CROMWELL_RUNNER app is ready in workspace {workspace_id}...")
-cromwell_url = poll_for_app_url(workspace_id, 'CROMWELL_RUNNER_APP', 'cromwell-runner', azure_token, leo_url)
-if cromwell_url == "":
-    logging.error(f"CROMWELL_RUNNER app not ready or errored out for workspace {workspace_id}")
-    exit(1)
+    # check that Cromwell Runner is ready; if not fail the test after 10 minutes of polling
+    logging.info(f"Polling to check if CROMWELL_RUNNER app is ready in workspace {workspace_id}...")
+    cromwell_url = poll_for_app_url(workspace_id, 'CROMWELL_RUNNER_APP', 'cromwell-runner', azure_token, leo_url)
+    if cromwell_url == "":
+        raise Exception(f"CROMWELL_RUNNER app not ready or errored out for workspace {workspace_id}")
 
-# check that WDS is ready; if not exit the test after 10 minutes of polling
-logging.info(f"Polling to check if WDS app is ready to upload data for workspace {workspace_id}...")
-wds_url = poll_for_app_url(workspace_id, 'WDS', 'wds', azure_token, leo_url)
-if wds_url == "":
-    logging.error(f"WDS app not ready or errored out for workspace {workspace_id}")
-    exit(1)
+    # check that WDS is ready; if not fail the test after 10 minutes of polling
+    logging.info(f"Polling to check if WDS app is ready to upload data for workspace {workspace_id}...")
+    wds_url = poll_for_app_url(workspace_id, 'WDS', 'wds', azure_token, leo_url)
+    if wds_url == "":
+        raise Exception(f"WDS app not ready or errored out for workspace {workspace_id}")
 
-# upload data to workspace
-upload_wds_data_using_api(wds_url, workspace_id, "e2e-test/resources/cbas/cbas-e2e-test-data.tsv", "test-data")
+    # upload data to workspace
+    upload_wds_data_using_api(wds_url, workspace_id, "e2e-test/resources/cbas/cbas-e2e-test-data.tsv", "test-data")
 
-# create a new method
-method_id = create_cbas_method(cbas_url, workspace_id)
-method_version_id = get_method_version_id(cbas_url, method_id)
+    # create a new method
+    method_id = create_cbas_method(cbas_url, workspace_id)
+    method_version_id = get_method_version_id(cbas_url, method_id)
 
-# submit workflow to CBAS
-run_set_id = submit_no_tasks_workflow(cbas_url, method_version_id)
+    # submit workflow to CBAS
+    run_set_id = submit_no_tasks_workflow(cbas_url, method_version_id)
 
-# Without polling CBAS, check if outputs were written back to WDS. We don't poll CBAS first to verify
-# that the callback API is working
-# Note: When "Multi-user Workflows: Auto app start up" phase is completed, CROMWELL_RUNNER app will
-#       be deployed automatically by WORKFLOWS app. As a result, a submission would take time to reach a
-#       terminal state as CROMWELL_RUNNER app would take a while to provision and then run the workflow.
-#       To avoid test failures when this happens we poll for 10 minutes to check if outputs are written back to WDS.
-logging.info("Polling to check if outputs were successfully written back to WDS...")
-poll_for_outputs_data(wds_url, workspace_id, 'test-data', '89P13')
+    # Without polling CBAS, check if outputs were written back to WDS. We don't poll CBAS first to verify
+    # that the callback API is working
+    # Note: When "Multi-user Workflows: Auto app start up" phase is completed, CROMWELL_RUNNER app will
+    #       be deployed automatically by WORKFLOWS app. As a result, a submission would take time to reach a
+    #       terminal state as CROMWELL_RUNNER app would take a while to provision and then run the workflow.
+    #       To avoid test failures when this happens we poll for 10 minutes to check if outputs are written back to WDS.
+    logging.info("Polling to check if outputs were successfully written back to WDS...")
+    poll_for_outputs_data(wds_url, workspace_id, 'test-data', '89P13')
 
-# check submission status
-logging.info("Checking submission status...")
-check_submission_status(cbas_url, method_id, run_set_id)
+    # check submission status
+    logging.info("Checking submission status...")
+    check_submission_status(cbas_url, method_id, run_set_id)
+except Exception as e:
+    logging.error(f"Exception(s) occurred during test. Details: {e}")
+    found_exception = True
+finally:
+    # delete workspace and apps
+    logging.info("Starting workspace cleanup...")
+    test_cleanup(workspace_name)
 
-# delete workspace and apps
-logging.info("Starting workspace cleanup...")
-test_cleanup(workspace_name)
-
-logging.info("Test completed successfully.")
+    # Use exit(1) so that GHA will fail if an exception was found during the test
+    if(found_exception):
+        logging.error("Exceptions found during test run. Test failed")
+        exit(1)
+    else:
+        logging.info("Test completed successfully")
