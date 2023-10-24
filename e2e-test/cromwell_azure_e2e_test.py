@@ -139,7 +139,7 @@ def main():
 
         # This chunk of code only executes one workflow
         # Would like to modify this down the road to execute and store references for multiple workflows
-        workflow_response = submit_hello_world_to_cromwell(app_url, "Run Workflow Test")
+        workflow_response = submit_hello_world_to_cromwell(app_url, token, "Run Workflow Test")
         logging.info(f'Executing sleep for {workflow_run_sleep_timer} seconds to allow workflow(s) to complete')
         time.sleep(workflow_run_sleep_timer)
 
