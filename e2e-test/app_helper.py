@@ -23,7 +23,9 @@ def create_app(workspace_id, leo_url, app_type, access_scope, azure_token):
 
     response = requests.post(url=uri, json=body, headers=headers)
     # will return 202 or error
-    assert response.status_code == 202, f"Error creating {app_type} app. Response: {response.text}"
+    if response.status_code != 202:
+        raise Exception(f"Error creating {app_type} app. Response: {response.text}")
+
     logging.info(response.text)
 
 # GET APP PROXY URL FROM LEO
@@ -39,12 +41,13 @@ def poll_for_app_url(workspaceId, app_type, proxy_url_name, azure_token, leo_url
 
     while poll_count > 0:
         response = requests.get(leo_get_app_api, headers=headers)
-        assert response.status_code == 200, f"Error fetching apps from Leo: ${response.text}"
+        if response.status_code != 200:
+            raise Exception(f"Error fetching apps from Leo: ${response.text}")
         response = json.loads(response.text)
 
         # Don't run in an infinite loop if you forgot to start the app/it was never created
         if app_type not in [item['appType'] for item in response]:
-            logging.warn(f"{app_type} not found in apps, has it been started?")
+            logging.warning(f"{app_type} not found in apps, has it been started?")
             return ""
         for entries in response:
             if entries['appType'] == app_type:
@@ -52,7 +55,7 @@ def poll_for_app_url(workspaceId, app_type, proxy_url_name, azure_token, leo_url
                     logging.info(f"{app_type} is still provisioning. Sleeping for 30 seconds")
                     time.sleep(30)
                 elif entries['status'] == 'ERROR':
-                    logging.error(f"{app_type} is in ERROR state. Quitting.")
+                    logging.error(f"{app_type} is in ERROR state")
                     return ""
                 elif entries['proxyUrls'][proxy_url_name] is None:
                     logging.error(f"{app_type} proxyUrls not found: {entries}")
@@ -62,5 +65,5 @@ def poll_for_app_url(workspaceId, app_type, proxy_url_name, azure_token, leo_url
                     return entries['proxyUrls'][proxy_url_name]
         poll_count -= 1
 
-    logging.error(f"App still provisioning or missing after 10 minutes, quitting")
+    logging.error(f"App still provisioning or missing after 10 minutes")
     return ""
