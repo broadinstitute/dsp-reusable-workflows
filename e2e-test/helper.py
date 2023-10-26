@@ -1,12 +1,10 @@
 from workspace_helper import create_workspace
 from app_helper import poll_for_app_url
-import json
 import uuid
 import random
 import string
 import wds_client
 import requests
-import time
 import logging
 
 logging.basicConfig(level=logging.DEBUG)

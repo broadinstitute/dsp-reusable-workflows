@@ -1,8 +1,5 @@
 import requests
-import os
 import json
-import random
-import string
 import uuid
 import time
 import logging

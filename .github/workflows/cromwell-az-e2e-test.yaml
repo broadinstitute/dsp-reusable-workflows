@@ -1,0 +1,58 @@
+name: cromwell-az-e2e-test
+
+on:
+  workflow_call:
+    inputs: 
+      branch:
+        description: 'Branch to run tests on'
+        default: main
+        required: true
+        type: string
+      billing-project-name:
+        description: 'Project name to be used for namespace designation'
+        required: true
+        type: string
+      bee-name:
+        description: 'Name of bee running tests'
+        required: true
+        type: string
+
+jobs:
+  run-cromwell-az-e2e:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: refs/heads/${{inputs.branch}}
+          repository: broadinstitute/dsp-reusable-workflows
+          path: dsp-reusable-workflows/
+      - name: Set up python
+        id: setup-python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          cd dsp-reusable-workflows/e2e-test/resources/cromwell/
+          pip install -r requirements.txt
+      - name: Generate OAuth2 2.0 access token for owner
+        id: 'obtain_token'
+        uses: google-github-actions/auth@v1
+        with:
+          token_format: 'access_token'
+          workload_identity_provider: 'projects/1038484894585/locations/global/workloadIdentityPools/github-wi-pool/providers/github-wi-provider'
+          service_account: 'firecloud-qa@broad-dsde-qa.iam.gserviceaccount.com'
+          access_token_scopes: 'profile, email, openid'
+          access_token_subject: 'hermione.owner@quality.firecloud.org'
+          export_environment_variables: false
+      - name: Run e2e test
+        env:
+          BEE_NAME: ${{inputs.bee-name}}
+          BILLING_PROJECT_NAME: ${{inputs.billing-project-name}}
+          BEARER_TOKEN: ${{ steps.obtain_token.outputs.access_token }}
+        run: |
+          cd dsp-reusable-workflows/
+          python e2e-test/cromwell_azure_e2e_test.py
