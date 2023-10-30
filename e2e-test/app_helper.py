@@ -58,7 +58,7 @@ def poll_for_app_url(workspaceId, app_type, proxy_url_name, azure_token, leo_url
                     logging.error(f"{app_type} proxyUrls not found: {entries}")
                     return ""
                 else:
-                    logging.info(f"{app_type} is in READY state")
+                    logging.info(f"{app_type} is in READY state; returning url {entries['proxyUrls'][proxy_url_name]}")
                     return entries['proxyUrls'][proxy_url_name]
         poll_count -= 1
 
