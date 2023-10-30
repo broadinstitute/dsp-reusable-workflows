@@ -3,11 +3,6 @@ name: cromwell-az-e2e-test
 on:
   workflow_call:
     inputs: 
-      branch:
-        description: 'Branch to run tests on'
-        default: main
-        required: true
-        type: string
       billing-project-name:
         description: 'Project name to be used for namespace designation'
         required: true
@@ -26,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          ref: refs/heads/${{inputs.branch}}
+          ref: main
           repository: broadinstitute/dsp-reusable-workflows
           path: dsp-reusable-workflows/
       - name: Set up python
