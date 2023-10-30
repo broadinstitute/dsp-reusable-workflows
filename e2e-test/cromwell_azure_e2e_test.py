@@ -102,23 +102,12 @@ def get_completed_workflow(app_url, workflow_ids, bearer_token, max_retries=4, s
                 time.sleep(sleep_timer)
     logging.info("Workflow(s) submission and completion successful")
         
-def test_cleanup(workspace_namespace, workspace_name, bearer_token):
-    try:
-        delete_workspace(workspace_namespace, workspace_name, rawls_url, bearer_token)
-        logging.info("Workspace cleanup complete")
-    # Catch the exeception and continue with the test since we don't want cleanup to affect the test results
-    # We can assume that Janitor will clean up the workspace if the test fails
-    except Exception as e:
-        logging.info("Error cleaning up workspace, test script will continue")
-        logging.info(f'Exception details below:\n{e}')
-        
 def main():
     workspace_name = ""
     workspace_id = ""
     found_exception = False
     
     # Sleep timers for various steps in the test
-    provision_sleep_timer = 60 * 5
     workflow_run_sleep_timer = 60 * 5
     workflow_status_sleep_timer = 60 * 2
     
@@ -151,7 +140,12 @@ def main():
         logging.info(f"Exception occured during test:\n{e}")
         found_exception = True
     finally:
-        test_cleanup(billing_project_name, workspace_name, token)
+        try:
+            delete_workspace(billing_project_name, workspace_name, rawls_url, token)
+        except Exception as e:
+            found_exception = True
+            logging.info(f"Failed to delete workspace: {e}")
+            
         # Use exit(1) so that GHA will fail if an exception was found during the test
         if(found_exception):
             logging.error("Workflow test failed due to exception(s)")
