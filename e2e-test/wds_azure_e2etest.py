@@ -51,7 +51,7 @@ def run_workspace_app_test(cbas, wds_upload, cbas_submit_workflow, test_cloning,
         check_wds_data(wds_url, clone_id, "test", azure_token)
 
     if delete_created_workspace:
-        test_cleanup(workspace_name)
+        test_cleanup(workspace_name, azure_token)
 
     print("TEST COMPLETE.")
 
