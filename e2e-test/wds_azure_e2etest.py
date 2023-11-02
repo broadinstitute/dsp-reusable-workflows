@@ -13,8 +13,9 @@ cbas=False
 wds_upload=True
 cbas_submit_workflow=False
 test_cloning=False
+delete_created_workspace=True
 
-def run_workspace_app_test(cbas, wds_upload, cbas_submit_workflow, test_cloning):
+def run_workspace_app_test(cbas, wds_upload, cbas_submit_workflow, test_cloning, delete_created_workspace):
 
     workspace_manager_url, rawls_url, leo_url = setup(bee_name)
     header = {"Authorization": "Bearer " + azure_token};
@@ -49,7 +50,10 @@ def run_workspace_app_test(cbas, wds_upload, cbas_submit_workflow, test_cloning)
         wds_url = poll_for_app_url(clone_id, "WDS", "wds", azure_token, leo_url)
         check_wds_data(wds_url, clone_id, "test", azure_token)
 
+    if delete_created_workspace:
+        test_cleanup(billing_project_name, workspace_name, azure_token)
+
     print("TEST COMPLETE.")
 
 # Run create & clone wds test
-run_workspace_app_test(cbas,wds_upload,cbas_submit_workflow,True)
+run_workspace_app_test(cbas,wds_upload,cbas_submit_workflow,True,delete_created_workspace)
