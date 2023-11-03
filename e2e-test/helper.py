@@ -1,4 +1,4 @@
-from workspace_helper import create_workspace
+from workspace_helper import create_workspace, delete_workspace
 from app_helper import poll_for_app_url
 import uuid
 import random
