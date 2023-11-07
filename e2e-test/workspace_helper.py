@@ -7,49 +7,59 @@ import logging
 
 
 # CREATE WORKSPACE ACTION
-def create_workspace(billing_project_name, azure_token, rawls_url, workspace_name = ""):
-    # create a new workspace, need to have attributes or api call doesnt work
-    rawls_workspace_api = f"{rawls_url}/api/workspaces"
-    workspace_name = workspace_name if workspace_name else f"e2e-test-api-workspace-{''.join(random.choices(string.ascii_lowercase, k=5))}"
-    logging.info(f"Creating workspace {workspace_name} in {billing_project_name}")
-    request_body= {
-        "namespace": billing_project_name,
-        "name": workspace_name,
-        "attributes": {}
-    }
-    header = {
-        "Authorization": "Bearer " + azure_token,
-        "accept": "application/json"
-    }
+def create_workspace(billing_project_name, azure_token, rawls_url, workspace_name = "", retries = 1):
+    for i in range(0,3):
+    while True:
+        try:
+            # create a new workspace, need to have attributes or api call doesnt work
+            rawls_workspace_api = f"{rawls_url}/api/workspaces"
+            workspace_name = workspace_name if workspace_name else f"e2e-test-api-workspace-{''.join(random.choices(string.ascii_lowercase, k=5))}"
+            logging.info(f"Creating workspace {workspace_name} in {billing_project_name}")
+            request_body= {
+                "namespace": billing_project_name,
+                "name": workspace_name,
+                "attributes": {}
+            }
+            header = {
+                "Authorization": "Bearer " + azure_token,
+                "accept": "application/json"
+            }
 
-    workspace_response = requests.post(url=rawls_workspace_api, json=request_body, headers=header)
-    if workspace_response.status_code != 201:
-        raise Exception(f"Error creating workspace: {workspace_response.text}")
+            workspace_response = requests.post(url=rawls_workspace_api, json=request_body, headers=header)
+            if workspace_response.status_code != 201:
+                logging.info(f"ERROR workspace creation for '{workspace_name}' in billing project '{billing_project_name}'. Response: {workspace_response}")
+                raise Exception(f"Error creating workspace: {workspace_response.text}")
 
-    # example json that is returned by request:
-    # {
-    #   "attributes": {},
-    #   "authorizationDomain": [],
-    #   "bucketName": "",
-    #   "createdBy": "yulialovesterra@gmail.com",
-    #   "createdDate": "2023-08-03T20:10:59.116Z",
-    #   "googleProject": "",
-    #   "isLocked": False,
-    #   "lastModified": "2023-08-03T20:10:59.116Z",
-    #   "name": "api-workspace-1",
-    #   "namespace": "yuliadub-test2",
-    #   "workspaceId": "ac466322-2325-4f57-895d-fdd6c3f8c7ad",
-    #   "workspaceType": "mc",
-    #   "workspaceVersion": "v2"
-    # }
-    workspace_response_json = workspace_response.json()
-    data = json.loads(json.dumps(workspace_response_json))
+            # example json that is returned by request:
+            # {
+            #   "attributes": {},
+            #   "authorizationDomain": [],
+            #   "bucketName": "",
+            #   "createdBy": "yulialovesterra@gmail.com",
+            #   "createdDate": "2023-08-03T20:10:59.116Z",
+            #   "googleProject": "",
+            #   "isLocked": False,
+            #   "lastModified": "2023-08-03T20:10:59.116Z",
+            #   "name": "api-workspace-1",
+            #   "namespace": "yuliadub-test2",
+            #   "workspaceId": "ac466322-2325-4f57-895d-fdd6c3f8c7ad",
+            #   "workspaceType": "mc",
+            #   "workspaceVersion": "v2"
+            # }
+            workspace_response_json = workspace_response.json()
+            data = json.loads(json.dumps(workspace_response_json))
 
-    workspace_id = data['workspaceId']
-    logging.info(f"Successfully started workspace creation for '{workspace_name}' in billing project '{billing_project_name}'. Workspace ID returned: {workspace_id}")
+            workspace_id = data['workspaceId']
+            logging.info(f"Successfully started workspace creation for '{workspace_name}' in billing project '{billing_project_name}'. Workspace ID returned: {workspace_id}")
 
-    return workspace_id, data['name']
+            return workspace_id, data['name']
 
+        except Exception as e:
+            logging.info(f"ERROR workspace creation for '{workspace_name}' in billing project '{billing_project_name}'. Error: {e}")
+            continue
+        break
+
+    return null
 
 # DELETE WORKSPACE ACTION
 def delete_workspace(billing_project_name, workspace_name, rawls_url, azure_token):
