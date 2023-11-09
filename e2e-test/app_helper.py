@@ -39,31 +39,31 @@ def poll_for_app_url(workspaceId, app_type, proxy_url_name, azure_token, leo_url
     for i in range(0,3):
         while True:
             try:
-                while poll_count > 0:
-                    response = requests.get(leo_get_app_api, headers=headers)
-                    if response.status_code != 200:
-                        raise Exception(f"Error fetching apps from Leo: ${response.text}")
-                    response = json.loads(response.text)
+              while poll_count > 0:
+                  response = requests.get(leo_get_app_api, headers=headers)
+                  if response.status_code != 200:
+                      raise Exception(f"Error fetching apps from Leo: ${response.text}")
+                  response = json.loads(response.text)
 
-                    # Don't run in an infinite loop if you forgot to start the app/it was never created
-                    if app_type not in [item['appType'] for item in response]:
-                        logging.warning(f"{app_type} not found in apps, has it been started?")
-                        return ""
-                    for entries in response:
-                        if entries['appType'] == app_type:
-                            if entries['status'] == "PROVISIONING":
-                                logging.info(f"{app_type} is still provisioning. Sleeping for 30 seconds")
-                                time.sleep(30)
-                            elif entries['status'] == 'ERROR':
-                                logging.error(f"{app_type} is in ERROR state")
-                                return ""
-                            elif entries['proxyUrls'][proxy_url_name] is None:
-                                logging.error(f"{app_type} proxyUrls not found: {entries}")
-                                return ""
-                            else:
-                                logging.info(f"{app_type} is in READY state")
-                                return entries['proxyUrls'][proxy_url_name]
-                    poll_count -= 1
+                  # Don't run in an infinite loop if you forgot to start the app/it was never created
+                  if app_type not in [item['appType'] for item in response]:
+                      logging.warning(f"{app_type} not found in apps, has it been started?")
+                      return ""
+                  for entries in response:
+                      if entries['appType'] == app_type:
+                          if entries['status'] == "PROVISIONING":
+                              logging.info(f"{app_type} is still provisioning. Sleeping for 30 seconds")
+                              time.sleep(30)
+                          elif entries['status'] == 'ERROR':
+                              logging.error(f"{app_type} is in ERROR state. Error details: {entries['errors']}")
+                              return ""
+                          elif entries['proxyUrls'][proxy_url_name] is None:
+                              logging.error(f"{app_type} proxyUrls not found: {entries}")
+                              return ""
+                          else:
+                              logging.info(f"{app_type} is in READY state")
+                              return entries['proxyUrls'][proxy_url_name]
+                  poll_count -= 1
             except Exception as e:
                 logging.info(f"ERROR polling for app '{app_type}' in workspace '{workspaceId}'. Error: {e}")
                 # for retries, shorten the time for polling, since these would be caused by transient errors, not waiting for apps to start
