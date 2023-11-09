@@ -52,7 +52,7 @@ def poll_for_app_url(workspaceId, app_type, proxy_url_name, azure_token, leo_url
                     logging.info(f"{app_type} is still provisioning. Sleeping for 30 seconds")
                     time.sleep(30)
                 elif entries['status'] == 'ERROR':
-                    logging.error(f"{app_type} is in ERROR state")
+                    logging.error(f"{app_type} is in ERROR state. Error details: {entries['errors']}")
                     return ""
                 elif entries['proxyUrls'][proxy_url_name] is None:
                     logging.error(f"{app_type} proxyUrls not found: {entries}")
