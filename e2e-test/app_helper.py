@@ -66,6 +66,8 @@ def poll_for_app_url(workspaceId, app_type, proxy_url_name, azure_token, leo_url
                     poll_count -= 1
             except Exception as e:
                 logging.info(f"ERROR polling for app '{app_type}' in workspace '{workspaceId}'. Error: {e}")
+                # for retries, shorten the time for polling, since these would be caused by transient errors, not waiting for apps to start
+                poll_count = 2
                 continue
             break
 
