@@ -33,7 +33,7 @@ jobs:
       - name: "Checkout dsp-reusable-workflows"
         uses: actions/checkout@v3
         with:
-          ref: aj-1362-retries
+          ref: main
           repository: broadinstitute/dsp-reusable-workflows
           path: ${{ env.CHECKOUT_PATH }}
 
