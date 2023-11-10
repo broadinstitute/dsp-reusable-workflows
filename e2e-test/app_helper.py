@@ -3,7 +3,7 @@ import json
 import uuid
 import time
 import logging
-import retries
+import shared_variables
 
 
 # CREATE APP IN WORKSPACE
@@ -37,7 +37,7 @@ def poll_for_app_url(workspaceId, app_type, proxy_url_name, azure_token, leo_url
     # prevent infinite loop
     polling_attempts_remaining = 20 # 30s x 20 = 10 min
     
-    for i in range(0,RETRIES):
+    for i in range(0,shared_variables.RETRIES):
         try:
             while polling_attempts_remaining > 0:
                 response = requests.get(leo_get_app_api, headers=headers)

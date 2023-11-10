@@ -4,12 +4,12 @@ import random
 import string
 import time
 import logging
-import retries
+import shared_variables
 
 
 # CREATE WORKSPACE ACTION
 def create_workspace(billing_project_name, azure_token, rawls_url, workspace_name = ""):
-    for i in range(0,RETRIES):
+    for i in range(0,shared_variables.RETRIES):
         try:
             # create a new workspace, need to have attributes or api call doesnt work
             rawls_workspace_api = f"{rawls_url}/api/workspaces"
