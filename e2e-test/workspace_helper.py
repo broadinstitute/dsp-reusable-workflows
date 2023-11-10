@@ -24,8 +24,6 @@ def create_workspace(billing_project_name, azure_token, rawls_url, workspace_nam
                 "Authorization": "Bearer " + azure_token,
                 "accept": "application/json"
             }
- 
-            raise Exception(f"Test eception to test retries")
 
             workspace_response = requests.post(url=rawls_workspace_api, json=request_body, headers=header)
             if workspace_response.status_code != 201:
