@@ -58,7 +58,6 @@ def create_workspace(billing_project_name, azure_token, rawls_url, workspace_nam
             logging.info(f"ERROR workspace creation for '{workspace_name}' in billing project '{billing_project_name}'. Error: {e}")
             continue
     else:
-        # this will execute if the loop didnt exit abnormally (i.e. with break)
         raise Exception(f"Error creating workspace: retries maxed out.")
 
 # DELETE WORKSPACE ACTION

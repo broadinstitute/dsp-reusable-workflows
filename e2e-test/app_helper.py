@@ -74,7 +74,6 @@ def poll_for_app_url(workspaceId, app_type, proxy_url_name, azure_token, leo_url
             logging.error(f"App still provisioning or missing after 10 minutes")
             break
     else:
-        # this will execute if the loop didnt exit abnormally (i.e. with break)
         raise Exception(f"Error polling for app url: retries maxed out.")
 
     return ""
