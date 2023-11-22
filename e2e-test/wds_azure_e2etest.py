@@ -46,7 +46,7 @@ def run_workspace_app_test(cbas, wds_upload, cbas_submit_workflow, test_cloning,
         submit_workflow_assemble_refbased(workspace_id, "resources/assemble_refbased.json", azure_token)
 
     if test_cloning:
-        clone_id = clone_workspace(billing_project_name, workspace_name, header, delete_created_workspace)
+        clone_id = clone_workspace(billing_project_name, workspace_name, header, delete_created_workspace, azure_token)
         wds_url = poll_for_app_url(clone_id, "WDS", "wds", azure_token, leo_url)
         check_wds_data(wds_url, clone_id, "test", azure_token)
 
