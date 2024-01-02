@@ -48,7 +48,10 @@ def poll_for_app_url(workspaceId, app_type, proxy_url_name, azure_token, leo_url
                 # Don't run in an infinite loop if you forgot to start the app/it was never created
                 if app_type not in [item['appType'] for item in response]:
                     logging.warning(f"{app_type} not found in apps, has it been started?")
-                    return ""
+                    if polling_attempts_remaining < 10:
+                        return ""
+                    else:
+                        time.sleep(30)
                 for entries in response:
                     if entries['appType'] == app_type:
                         if entries['status'] == "PROVISIONING":
