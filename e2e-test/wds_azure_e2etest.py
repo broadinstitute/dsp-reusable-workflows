@@ -31,7 +31,7 @@ def run_workspace_app_test(cbas, wds_upload, cbas_submit_workflow, test_cloning,
     else:
         print("TEST COMPLETE.")
 
-    upload_success = false
+    upload_success = False
 
     if wds_upload:
         logging.info(f"trying to see wds is ready to upload to workspace {workspace_id}")
