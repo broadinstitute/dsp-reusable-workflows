@@ -35,7 +35,7 @@ def poll_for_app_url(workspaceId, app_type, proxy_url_name, azure_token, leo_url
     }
 
     # prevent infinite loop
-    polling_attempts_remaining = 20 # 30s x 20 = 10 min
+    polling_attempts_remaining = 30 # 30s x 30 = 15 min
     
     for i in range(0,shared_variables.RETRIES):
         try:
