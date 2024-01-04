@@ -70,6 +70,8 @@ def upload_wds_data(wds_url, current_workspaceId, tsv_file_name, recordName, azu
     response = records_client.upload_tsv(current_workspaceId, version, recordName, tsv_file_name)
     logging.debug(response)
     assert response.records_modified == count, f"Uploading to wds failed: {response.reason}"
+    # return true if upload succeeded
+    return response.records_modified == count
 
 
 # KICK OFF A WORKFLOW INSIDE A WORKSPACE

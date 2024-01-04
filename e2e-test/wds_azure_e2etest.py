@@ -31,21 +31,24 @@ def run_workspace_app_test(cbas, wds_upload, cbas_submit_workflow, test_cloning,
     else:
         print("TEST COMPLETE.")
 
+    upload_success = False
+
     if wds_upload:
         logging.info(f"trying to see wds is ready to upload to workspace {workspace_id}")
         wds_url = poll_for_app_url(workspace_id, "WDS", "wds", azure_token, leo_url)
         if wds_url == "":
             logging.error(f"wds errored out for workspace {workspace_id}")
         else:
-            upload_wds_data(wds_url, workspace_id, "resources/test.tsv", "test", azure_token)
+            upload_success = upload_wds_data(wds_url, workspace_id, "resources/test.tsv", "test", azure_token)
 
     if cbas_submit_workflow:
         # next trigger a workflow in each of the workspaces, at this time this doesnt monitor if this was succesful or not
         # upload file needed for workflow to run
-        upload_wds_data(wds_url, workspace_id, "resources/sraloadtest.tsv", "sraloadtest", azure_token)
+        upload_success = upload_wds_data(wds_url, workspace_id, "resources/sraloadtest.tsv", "sraloadtest", azure_token)
         submit_workflow_assemble_refbased(workspace_id, "resources/assemble_refbased.json", azure_token)
 
-    if test_cloning:
+    # no point in testing cloning if upload didn't succeed in first place
+    if test_cloning and upload_success:
         clone_id = clone_workspace(billing_project_name, workspace_name, header, delete_created_workspace, azure_token)
         wds_url = poll_for_app_url(clone_id, "WDS", "wds", azure_token, leo_url)
         check_wds_data(wds_url, clone_id, "test", azure_token)
