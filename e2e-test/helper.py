@@ -109,11 +109,12 @@ def submit_workflow_assemble_refbased(workspaceId, dataFile, azure_token):
     # }
     logging.debug(response.json())
 
-def clone_workspace(billing_project_name, workspace_name, header):
+def clone_workspace(billing_project_name, workspace_name, header, delete_created_workspace, azure_token):
     clone_workspace_api = f"{rawls_url}/api/workspaces/{billing_project_name}/{workspace_name}/clone";
+    cloneWorkspaceName =  "name": f"{workspace_name} clone-{''.join(random.choices(string.ascii_lowercase, k=3))}";
     request_body = {
         "namespace": billing_project_name,  # Billing project name
-        "name": f"{workspace_name} clone-{''.join(random.choices(string.ascii_lowercase, k=3))}",  # workspace name
+        "name": cloneWorkspaceName,  # workspace name
         "attributes": {}};
 
     logging.info(f"cloning workspace {workspace_name}")
@@ -122,6 +123,10 @@ def clone_workspace(billing_project_name, workspace_name, header):
     # example json that is returned by request: 'attributes': {}, 'authorizationDomain': [], 'bucketName': '', 'createdBy': 'yulialovesterra@gmail.com', 'createdDate': '2023-08-03T20:10:59.116Z', 'googleProject': '', 'isLocked': False, 'lastModified': '2023-08-03T20:10:59.116Z', 'name': 'api-workspace-1', 'namespace': 'yuliadub-test2', 'workspaceId': 'ac466322-2325-4f57-895d-fdd6c3f8c7ad', 'workspaceType': 'mc', 'workspaceVersion': 'v2'}
     clone_response_json = response.json()
     logging.debug(clone_response_json)
+    
+    if delete_created_workspace:
+        test_cleanup(billing_project_name, cloneWorkspaceName, azure_token)
+    
     return clone_response_json["workspaceId"]
 
 def check_wds_data(wds_url, workspaceId, recordName, azure_token):
