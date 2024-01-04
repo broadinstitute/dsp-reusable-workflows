@@ -35,7 +35,8 @@ def poll_for_app_url(workspaceId, app_type, proxy_url_name, azure_token, leo_url
     }
 
     # prevent infinite loop
-    polling_attempts_remaining = 30 # 30s x 30 = 15 min
+    max_polling_attempts = 30 # 30s x 30 = 15 min
+    polling_attempts_remaining = max_polling_attempts
     
     for i in range(0,shared_variables.RETRIES):
         try:
@@ -50,7 +51,7 @@ def poll_for_app_url(workspaceId, app_type, proxy_url_name, azure_token, leo_url
                     logging.warning(f"{app_type} not found in apps, has it been started?")
                     # The app *might* not appear in the list immediately; 
                     # let a few polls pass for it to get to PROVISIONING stage before quitting
-                    if polling_attempts_remaining < 10:
+                    if polling_attempts_remaining < max_polling_attempts - 2:
                         return ""
                     else:
                         time.sleep(30)
