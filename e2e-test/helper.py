@@ -111,7 +111,7 @@ def submit_workflow_assemble_refbased(workspaceId, dataFile, azure_token):
 
 def clone_workspace(billing_project_name, workspace_name, header, delete_created_workspace, azure_token):
     clone_workspace_api = f"{rawls_url}/api/workspaces/{billing_project_name}/{workspace_name}/clone";
-    cloneWorkspaceName =  "name": f"{workspace_name} clone-{''.join(random.choices(string.ascii_lowercase, k=3))}";
+    cloneWorkspaceName =  f"{workspace_name} clone-{''.join(random.choices(string.ascii_lowercase, k=3))}";
     request_body = {
         "namespace": billing_project_name,  # Billing project name
         "name": cloneWorkspaceName,  # workspace name
