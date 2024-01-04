@@ -49,7 +49,7 @@ def run_workspace_app_test(cbas, wds_upload, cbas_submit_workflow, test_cloning,
 
     # no point in testing cloning if upload didn't succeed in first place
     if test_cloning and upload_success:
-        clone_id = clone_workspace(billing_project_name, workspace_name, header, delete_created_workspace, azure_token)
+        clone_id = clone_workspace(billing_project_name, workspace_name, header)
         wds_url = poll_for_app_url(clone_id, "WDS", "wds", azure_token, leo_url)
         check_wds_data(wds_url, clone_id, "test", azure_token)
 
