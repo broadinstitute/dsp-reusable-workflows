@@ -66,14 +66,16 @@ def get_workflow_metadata(app_url, workflow_id, bearer_token):
     return perform_get(workflow_endpoint, bearer_token)
 
 # workflow_ids is a deque of workflow ids
-def get_completed_workflow(app_url, workflow_ids, bearer_token, max_retries=4, sleep_timer=60 * 2):
+def get_completed_workflow(app_url, workflow_ids, bearer_token, max_attempts=6, sleep_timer=60 * 2):
     success_statuses = ['Succeeded']
     throw_exception_statuses = ['Aborted', 'Failed']
+
+    remaining_attempts = max_attempts
     
     current_running_workflow_count = 0
     while workflow_ids:
-        if max_retries == 0:
-            raise Exception(f"Workflow(s) did not finish running within retry window ({max_retries} retries)")
+        if remaining_attempts == 0:
+            raise Exception(f"Workflow(s) did not finish running within retry window ({max_attempts} attempts)")
         
         workflow_id = workflow_ids.pop()
         workflow_status_json = get_workflow_status(app_url, workflow_id, bearer_token)
@@ -94,10 +96,10 @@ def get_completed_workflow(app_url, workflow_ids, bearer_token, max_retries=4, s
                 logging.info("Workflow(s) finished running")
             else:
                 # Reset current count to 0 for next retry
-                # Decrement max_retries by 1
+                # Decrement remaining_attempts by 1
                 # Wait for sleep_timer before checking workflow statuses again (adjust value as needed)
                 logging.info(f"These workflows have yet to return a completed status: [{', '.join(workflow_ids)}]")
-                max_retries -= 1
+                remaining_attempts -= 1
                 current_running_workflow_count = 0
                 time.sleep(sleep_timer)
     logging.info("Workflow(s) submission and completion successful")
