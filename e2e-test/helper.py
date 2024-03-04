@@ -134,7 +134,7 @@ def check_wds_data(wds_url, workspaceId, recordName, azure_token):
     logging.info("verifying data was cloned")
     response = schema_client.describe_record_type(workspaceId, version, recordName);
     assert response.name == recordName, "Name does not match"
-    assert response.count == 2504, "Count does not match"
+    assert response.count == 2506, "Count does not match"
 
 def test_cleanup(billing_project_name, workspace_name, azure_token):
     try:
