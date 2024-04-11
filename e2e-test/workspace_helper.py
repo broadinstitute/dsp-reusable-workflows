@@ -15,6 +15,7 @@ def create_workspace(billing_project_name, azure_token, rawls_url, workspace_nam
             rawls_workspace_api = f"{rawls_url}/api/workspaces"
             workspace_name = workspace_name if workspace_name else f"e2e-test-api-workspace-{''.join(random.choices(string.ascii_lowercase, k=5))}"
             logging.info(f"Creating workspace {workspace_name} in {billing_project_name}")
+            # note that if the billing project is a protected one, the workspace will automatically be protected as well and does not need to be specified as such here
             request_body= {
                 "namespace": billing_project_name,
                 "name": workspace_name,
