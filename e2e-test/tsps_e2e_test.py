@@ -82,6 +82,28 @@ def share_workspace(orch_url, billing_project_name, workspace_name, email_to_sha
     logging.info(f"Successfully shared workspace {workspace_name} with {email_to_share}")
 
 
+# update workspace id for imputation pipeline
+def update_imputation_pipeline_workspace_id(tsps_url, workspace_id, token):
+    request_body = {
+        "workspaceId": f"{workspace_id}"
+    }
+
+    uri = f"{tsps_url}/api/admin/v1/pipeline/imputation_beagle"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "accept": "application/json",
+        "Content-Type": "application/json"
+    }
+
+    response = requests.patch(uri, json=request_body, headers=headers)
+    status_code = response.status_code
+
+    if status_code != 200:
+        raise Exception(response.text)
+
+    logging.info(f"Successfully launched imputation pipeline")
+
+
 # run imputation pipeline
 def run_imputation_pipeline(tsps_url, token):
     request_body = {
@@ -153,6 +175,8 @@ if __name__ == "__main__":
         help='token for user to authenticate Terra API calls')
     parser.add_argument('-s', '--tsps_sa_token', required=False,
                         help='token for tsps SA to authenticate Terra API calls')
+    parser.add_argument('-a', '--admin_token', required=False,
+                        help='token for tsps SA to authenticate Terra API calls')
     parser.add_argument('-e', '--env', required=False,
         help='environment. e.g. `dev` (default) or bee name `terra-marymorg`')
     parser.add_argument('-p', '--billing_project', required=False,
@@ -176,6 +200,11 @@ if args.tsps_sa_token:
     azure_tsps_sa_token = args.tsps_sa_token
 else:
     azure_tsps_sa_token = os.environ.get("AZURE_TSPS_SA_TOKEN")
+
+if args.admin_token:
+    azure_admin_token = args.admin_token
+else:
+    azure_admin_token = os.environ.get("AZURE_ADMIN_TOKEN")
 
 if args.env:
     if args.is_bee:
@@ -278,6 +307,8 @@ try:
     method_id = create_imputation_method(cbas_url, workspace_id, azure_user_token)
 
     # use admin endpoint to set imputation workspace id
+    logging.info("updating imputation workspace id")
+    update_imputation_pipeline_workspace_id(tsps_url, workspace_id, azure_admin_token)
 
     # launch tsps imputation pipeline
     logging.info("running imputation pipeline")
