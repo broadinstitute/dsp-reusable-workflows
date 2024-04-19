@@ -66,7 +66,7 @@ def share_workspace(orch_url, billing_project_name, workspace_name, email_to_sha
         "canCompute": True
     }]
 
-    uri = f"{orch_url}/api/workspaces/{billing_project_name}/{workspace_name}/acl"
+    uri = f"{orch_url}/api/workspaces/{billing_project_name}/{workspace_name}/acl?inviteUsersNotFound=true"
     headers = {
         "Authorization": f"Bearer {owner_token}",
         "accept": "application/json",
@@ -101,7 +101,8 @@ def update_imputation_pipeline_workspace_id(tsps_url, workspace_id, token):
     if status_code != 200:
         raise Exception(response.text)
 
-    logging.info(f"Successfully launched imputation pipeline")
+    logging.info(f"successfully updated imputation pipeline workspace id: {workspace_id}")
+    logging.info(f"response text: {response.text}")
 
 
 # run imputation pipeline
@@ -142,7 +143,7 @@ def poll_for_imputation_job(tsps_url, job_id, token):
 
     # waiting for 25 total minutes, initial 5 minutes then 20 intervals of 1 minute each
     poll_count = 20
-    uri = f"{tsps_url}/api/pipelines/job/v1/imputation_beagle/result/{job_id}"
+    uri = f"{tsps_url}/api/pipelines/v1/imputation_beagle/result/{job_id}"
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json",
