@@ -87,7 +87,7 @@ def run_imputation_pipeline(tsps_url, token):
     request_body = {
         "description": "string",
         "jobControl": {
-            "id": uuid.uuid4()
+            "id": f'{uuid.uuid4()}'
         },
         "pipelineVersion": "string",
         "pipelineInputs": {}
@@ -120,7 +120,7 @@ def poll_for_imputation_job(tsps_url, job_id, token):
 
     # waiting for 25 total minutes, initial 5 minutes then 20 intervals of 1 minute each
     poll_count = 20
-    uri = f"{tsps_url}/api/job/v1/jobs/{job_id}"
+    uri = f"{tsps_url}/api/pipelines/job/v1/imputation_beagle/result/{job_id}"
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json",
@@ -135,8 +135,9 @@ def poll_for_imputation_job(tsps_url, job_id, token):
             # job is completed, test for status
             response = json.loads(response.text)
             if response['status'] != 'SUCCEEDED':
-                raise Exception('tsps pipeline failed')
+                raise Exception(f'tsps pipeline failed: {response}')
         elif status_code == 202:
+            logging.info("tsps pipeline still running, sleeping for 1 minute")
             # job is still running, sleep for the next poll
             time.sleep(1 * 60)
         else:
@@ -229,6 +230,9 @@ try:
     logging.info("sharing workspace with tsps qa service account")
     share_workspace(firecloud_orch_url, billing_project_name, workspace_name,
                     "tsps-qa@broad-dsde-qa.iam.gserviceaccount.com", azure_user_token)
+
+    share_workspace(firecloud_orch_url, billing_project_name, workspace_name,
+                    "jsoto@test.firecloud.org", azure_user_token)
 
     # After "Multi-user Workflow: Auto app start up" phase is completed, WORKFLOWS_APP will be launched
     # automatically at workspace creation time (similar to WDS). So to prevent test failures and errors
