@@ -197,7 +197,7 @@ else:
 
 rawls_url = f"https://rawls.{env_string}"
 leo_url = f"https://leonardo.{env_string}"
-firecloud_orch_url = f"https://firecloud-orchestration.{env_string}"
+firecloud_orch_url = f"https://firecloudorch.{env_string}"
 tsps_url = f"https://tsps.{env_string}"
 
 
