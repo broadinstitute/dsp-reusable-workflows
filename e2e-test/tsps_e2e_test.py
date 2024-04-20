@@ -82,6 +82,30 @@ def share_workspace(orch_url, billing_project_name, workspace_name, email_to_sha
     logging.info(f"Successfully shared workspace {workspace_name} with {email_to_share}")
 
 
+def add_to_billing_profile(rawls_url, billing_project_name, email_to_share, owner_token):
+    request_body = {
+        "membersToAdd": [
+            {"email": f"{email_to_share}", "role": "User"}
+        ],
+        "membersToRemove": []
+    }
+
+    uri = f"{rawls_url}/api/billing/v2/{billing_project_name}/members?inviteUsersNotFound=true"
+    headers = {
+        "Authorization": f"Bearer {owner_token}",
+        "accept": "application/json",
+        "Content-Type": "application/json"
+    }
+
+    response = requests.patch(uri, json=request_body, headers=headers)
+    status_code = response.status_code
+
+    if status_code != 204:
+        raise Exception(response.text)
+
+    logging.info(f"Successfully added {email_to_share} to billing project {billing_project_name}")
+
+
 # update workspace id for imputation pipeline
 def update_imputation_pipeline_workspace_id(tsps_url, workspace_id, token):
     request_body = {
@@ -157,15 +181,15 @@ def poll_for_imputation_job(tsps_url, job_id, token):
         if status_code == 200:
             # job is completed, test for status
             response = json.loads(response.text)
-            logging.info(f'tsps pipeline complete with 200 status, response is {response}')
-            if response['status'] != 'SUCCEEDED':
+            logging.info(f'tsps pipeline completed with 200 status')
+            if response['jobReport']['status'] != 'SUCCEEDED':
                 raise Exception(f'tsps pipeline failed: {response}')
         elif status_code == 202:
             logging.info("tsps pipeline still running, sleeping for 1 minute")
             # job is still running, sleep for the next poll
             time.sleep(1 * 60)
         else:
-            raise Exception(f'tsps pipeline failed with non {status_code} response. has response {response.text}')
+            raise Exception(f'tsps pipeline failed with a {status_code} status code. has response {response.text}')
         poll_count -= 1
 
     raise Exception(f"tsps pipeline did not complete in 25 minutes")
@@ -263,7 +287,10 @@ try:
                     "tsps-qa@broad-dsde-qa.iam.gserviceaccount.com", azure_user_token)
 
     share_workspace(firecloud_orch_url, billing_project_name, workspace_name,
-                    "jsoto@test.firecloud.org", azure_user_token)
+                    "jsoto.dev.again@gmail.com", azure_user_token)
+
+    logging.info(f"adding tsps qa service account to billing project {billing_project_name}")
+    add_to_billing_profile(rawls_url, billing_project_name, "tsps-qa@broad-dsde-qa.iam.gserviceaccount.com", azure_user_token)
 
     # After "Multi-user Workflow: Auto app start up" phase is completed, WORKFLOWS_APP will be launched
     # automatically at workspace creation time (similar to WDS). So to prevent test failures and errors
