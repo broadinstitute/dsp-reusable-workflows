@@ -182,7 +182,10 @@ def poll_for_imputation_job(tsps_url, job_id, token):
             # job is completed, test for status
             response = json.loads(response.text)
             logging.info(f'tsps pipeline completed with 200 status')
-            if response['jobReport']['status'] != 'SUCCEEDED':
+            if response['jobReport']['status'] == 'SUCCEEDED':
+                logging.info(f"tsps pipeline has succeeded: {response}")
+                return
+            else:
                 raise Exception(f'tsps pipeline failed: {response}')
         elif status_code == 202:
             logging.info("tsps pipeline still running, sleeping for 1 minute")
