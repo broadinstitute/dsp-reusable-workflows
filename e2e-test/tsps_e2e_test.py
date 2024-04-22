@@ -125,7 +125,6 @@ def update_imputation_pipeline_workspace_id(tsps_url, workspace_id, token):
         raise Exception(response.text)
 
     logging.info(f"successfully updated imputation pipeline workspace id: {workspace_id}")
-    logging.info(f"response text: {response.text}")
 
 
 # run imputation pipeline
@@ -205,6 +204,8 @@ if __name__ == "__main__":
                         help='token for tsps SA to authenticate Terra API calls')
     parser.add_argument('-a', '--admin_token', required=False,
                         help='token for tsps SA to authenticate Terra API calls')
+    parser.add_argument('-m', '--tsps_sa_email', required=False,
+                        help='email of tsps service account to share workspace/billing project with')
     parser.add_argument('-e', '--env', required=False,
         help='environment. e.g. `dev` (default) or bee name `terra-marymorg`')
     parser.add_argument('-p', '--billing_project', required=False,
@@ -232,6 +233,12 @@ if args.admin_token:
     azure_admin_token = args.admin_token
 else:
     azure_admin_token = os.environ.get("AZURE_ADMIN_TOKEN")
+
+if args.tsps_sa_email:
+    tsps_sa_email = args.tsps_sa_email
+else:
+    # e2e test is using the tsps qa service account
+    tsps_sa_email = "tsps-qa@broad-dsde-qa.iam.gserviceaccount.com"
 
 if args.env:
     if args.is_bee:
@@ -285,12 +292,12 @@ try:
     # share created workspace with the tsps service account
     logging.info("sharing workspace with tsps qa service account")
     share_workspace(firecloud_orch_url, billing_project_name, workspace_name,
-                    "tsps-qa@broad-dsde-qa.iam.gserviceaccount.com", azure_user_token)
+                    tsps_sa_email, azure_user_token)
 
     # add tsps service account to billing project, this can be removed once
     # https://broadworkbench.atlassian.net/browse/WOR-1620 is addressed
     logging.info(f"adding tsps qa service account to billing project {billing_project_name}")
-    add_user_to_billing_profile(rawls_url, billing_project_name, "tsps-qa@broad-dsde-qa.iam.gserviceaccount.com", azure_user_token)
+    add_user_to_billing_profile(rawls_url, billing_project_name, tsps_sa_email, azure_user_token)
 
     # After "Multi-user Workflow: Auto app start up" phase is completed, WORKFLOWS_APP will be launched
     # automatically at workspace creation time (similar to WDS). So to prevent test failures and errors
@@ -328,10 +335,6 @@ try:
     if wds_url == "":
         raise Exception(f"WDS app not ready or errored out for workspace {workspace_id}")
 
-    # use admin endpoint to set imputation workspace id
-    logging.info("updating imputation workspace id")
-    update_imputation_pipeline_workspace_id(tsps_url, workspace_id, azure_admin_token)
-
     # run stuff that when this is run as not part of the e2e test
     if args.user_token:
         # upload data to workspace
@@ -345,6 +348,10 @@ try:
 
     # run stuff that is only part of the e2e test
     else:
+        # use admin endpoint to set imputation workspace id
+        logging.info("updating imputation workspace id")
+        update_imputation_pipeline_workspace_id(tsps_url, workspace_id, azure_admin_token)
+
         # create a new imputation method that tsps will run
         logging.info("creating imputation method")
         method_id = create_cbas_method(cbas_url,
