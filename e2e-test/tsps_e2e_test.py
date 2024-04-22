@@ -289,15 +289,15 @@ try:
     logging.info("Sleeping for 1 minute to allow apps that auto-launch to start provisioning...")
     time.sleep(60)
 
-    # share created workspace with the tsps service account
-    logging.info("sharing workspace with tsps qa service account")
-    share_workspace(firecloud_orch_url, billing_project_name, workspace_name,
-                    tsps_sa_email, azure_user_token)
-
     # add tsps service account to billing project, this can be removed once
     # https://broadworkbench.atlassian.net/browse/WOR-1620 is addressed
     logging.info(f"adding tsps qa service account to billing project {billing_project_name}")
     add_user_to_billing_profile(rawls_url, billing_project_name, tsps_sa_email, azure_user_token)
+
+    # share created workspace with the tsps service account
+    logging.info("sharing workspace with tsps qa service account")
+    share_workspace(firecloud_orch_url, billing_project_name, workspace_name,
+                    tsps_sa_email, azure_user_token)
 
     # After "Multi-user Workflow: Auto app start up" phase is completed, WORKFLOWS_APP will be launched
     # automatically at workspace creation time (similar to WDS). So to prevent test failures and errors
