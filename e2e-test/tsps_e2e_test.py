@@ -9,6 +9,29 @@ import time
 import logging
 
 
+
+# Check whether workspace exists
+def workspace_exists(billing_project_name, workspace_name, rawls_url, azure_token):
+    # returns workspace_id if workspace exists, or None if not
+
+    rawls_workspace_api = f"{rawls_url}/api/workspaces/{billing_project_name}/{workspace_name}"
+    
+    header = {
+        "Authorization": "Bearer " + azure_token,
+        "accept": "application/json"
+    }
+
+    response = requests.get(url=rawls_workspace_api, headers=header)
+
+    status_code = response.status_code
+
+    if status_code != 200:
+        return None
+    
+    response_json = response.json()
+    return response_json['workspace']['workspaceId']
+
+
 # Upload data to WDS using APIs
 def upload_wds_data_using_api(wds_url, workspace_id, tsv_file_name, record_name):
     #open TSV file in read mode
@@ -281,9 +304,18 @@ try:
     logging.info("Starting Workflows Azure E2E test...")
     logging.info(f"billing project: {billing_project_name}, env_string: {env_string}")
 
-    # Create workspace
-    logging.info("Creating workspace...")
-    workspace_id, workspace_name = create_workspace(billing_project_name, azure_user_token, rawls_url, workspace_name)
+    if workspace_name == "":
+        workspace_id = None
+    else:
+        # Check if workspace exists already
+        logging.info(f"Checking if workspace {billing_project_name}/{workspace_name} exists...")
+        workspace_id = workspace_exists(billing_project_name, workspace_name, rawls_url, azure_user_token)
+        logging.info(f"Workspace {'already exists' if workspace_id else 'does not yet exist'}")
+
+    if not(workspace_id):
+        # Create workspace
+        logging.info("Creating workspace...")
+        workspace_id, workspace_name = create_workspace(billing_project_name, azure_user_token, rawls_url, workspace_name)
 
     # sleep for 1 minute to allow apps that auto-launch to start provisioning
     logging.info("Sleeping for 1 minute to allow apps that auto-launch to start provisioning...")
@@ -319,13 +351,18 @@ try:
     if cbas_url == "":
         raise Exception(f"WORKFLOWS app not ready or errored out for workspace {workspace_id}")
 
+    if args.user_token:
+        token_for_cromwell_runner_app = azure_user_token
+    else:
+        token_for_cromwell_runner_app = azure_tsps_sa_token
+
     # Create CROMWELL_RUNNER app in workspace
     logging.info("creating cromwell runner app")
-    create_app(workspace_id, leo_url, 'CROMWELL_RUNNER_APP', 'USER_PRIVATE', azure_tsps_sa_token)
+    create_app(workspace_id, leo_url, 'CROMWELL_RUNNER_APP', 'USER_PRIVATE', token_for_cromwell_runner_app)
 
     # check that Cromwell Runner is ready; if not fail the test after 10 minutes of polling
     logging.info(f"Polling to check if CROMWELL_RUNNER app is ready in workspace {workspace_id}...")
-    cromwell_url = poll_for_app_url(workspace_id, 'CROMWELL_RUNNER_APP', 'cromwell-runner', azure_tsps_sa_token, leo_url)
+    cromwell_url = poll_for_app_url(workspace_id, 'CROMWELL_RUNNER_APP', 'cromwell-runner', token_for_cromwell_runner_app, leo_url)
     if cromwell_url == "":
         raise Exception(f"CROMWELL_RUNNER app not ready or errored out for workspace {workspace_id}")
 
