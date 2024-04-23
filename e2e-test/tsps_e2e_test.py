@@ -1,107 +1,12 @@
-from workspace_helper import create_workspace, delete_workspace
+from workspace_helper import create_workspace, delete_workspace, share_workspace
 from app_helper import create_app, poll_for_app_url
-import argparse
+from helper import create_cbas_method
 import requests
 import os
 import json
 import uuid
 import time
 import logging
-
-
-
-# Check whether workspace exists
-def workspace_exists(billing_project_name, workspace_name, rawls_url, azure_token):
-    # returns workspace_id if workspace exists, or None if not
-
-    rawls_workspace_api = f"{rawls_url}/api/workspaces/{billing_project_name}/{workspace_name}"
-    
-    header = {
-        "Authorization": "Bearer " + azure_token,
-        "accept": "application/json"
-    }
-
-    response = requests.get(url=rawls_workspace_api, headers=header)
-
-    status_code = response.status_code
-
-    if status_code != 200:
-        return None
-    
-    response_json = response.json()
-    return response_json['workspace']['workspaceId']
-
-
-# Upload data to WDS using APIs
-def upload_wds_data_using_api(wds_url, workspace_id, tsv_file_name, record_name):
-    #open TSV file in read mode
-    with open(tsv_file_name) as tsv_file:
-        request_file = tsv_file.read()
-
-    uri = f"{wds_url}/{workspace_id}/tsv/v0.2/{record_name}"
-    headers = {"Authorization": f"Bearer {azure_user_token}"}
-
-    response = requests.post(uri, files={'records':request_file}, headers=headers)
-
-    status_code = response.status_code
-
-    if status_code != 200:
-        raise Exception(response.text)
-
-    logging.info(f"Successfully uploaded data to WDS. Response: {response.json()}")
-
-
-# Create imputation method in CBAS
-def create_cbas_method(cbas_url, workspace_id, github_url, token):
-    method_name = "ImputationBeagle"
-    request_body = {
-        "method_name": method_name,
-        "method_source": "GitHub",
-        "method_url": f"{github_url}",
-        "method_version": "1"
-    }
-
-    uri = f"{cbas_url}/api/batch/v1/methods"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "accept": "application/json",
-        "Content-Type": "application/json"
-    }
-
-    response = requests.post(uri, json=request_body, headers=headers)
-    status_code = response.status_code
-
-    if status_code != 200:
-        raise Exception(response.text)
-
-    logging.info(f"Successfully created method {method_name} for workspace {workspace_id}")
-    response = json.loads(response.text)
-
-    return response['method_id']
-
-
-def share_workspace(orch_url, billing_project_name, workspace_name, email_to_share, owner_token):
-    request_body = [{
-        "email": f"{email_to_share}",
-        "accessLevel": "OWNER",
-        "canShare": True,
-        "canCompute": True
-    }]
-
-    uri = f"{orch_url}/api/workspaces/{billing_project_name}/{workspace_name}/acl?inviteUsersNotFound=true"
-    headers = {
-        "Authorization": f"Bearer {owner_token}",
-        "accept": "application/json",
-        "Content-Type": "application/json"
-    }
-
-    response = requests.patch(uri, json=request_body, headers=headers)
-    status_code = response.status_code
-
-    if status_code != 200:
-        raise Exception(response.text)
-
-    logging.info(f"Successfully shared workspace {workspace_name} with {email_to_share}")
 
 
 def add_user_to_billing_profile(rawls_url, billing_project_name, email_to_share, owner_token):
@@ -219,68 +124,20 @@ def poll_for_imputation_job(tsps_url, job_id, token):
     raise Exception(f"tsps pipeline did not complete in 25 minutes")
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Run e2e test for TSPS/Imputation service')
-    parser.add_argument('-t', '--user_token', required=False,
-        help='token for user to authenticate Terra API calls')
-    parser.add_argument('-s', '--tsps_sa_token', required=False,
-                        help='token for tsps SA to authenticate Terra API calls')
-    parser.add_argument('-a', '--admin_token', required=False,
-                        help='token for tsps SA to authenticate Terra API calls')
-    parser.add_argument('-m', '--tsps_sa_email', required=False,
-                        help='email of tsps service account to share workspace/billing project with')
-    parser.add_argument('-e', '--env', required=False,
-        help='environment. e.g. `dev` (default) or bee name `terra-marymorg`')
-    parser.add_argument('-p', '--billing_project', required=False,
-        help='billing project to create workspace in')
-    parser.add_argument('-w', '--workspace_name', required=False,
-        help='name of workspace to be created, if left blank will be auto-generated')
-    parser.add_argument('-b', '--is-bee', action='store_true',
-        help='flag that the environment is a bee')
-    args = parser.parse_args()
-
-
 # Setup configuration
 # The environment variables are injected as part of the e2e test setup which does not pass in any args
-if args.user_token:
-    azure_user_token = args.user_token
-else:
-    azure_user_token = os.environ.get("AZURE_USER_TOKEN")
+azure_user_token = os.environ.get("AZURE_USER_TOKEN")
+azure_tsps_sa_token = os.environ.get("AZURE_TSPS_SA_TOKEN")
+azure_admin_token = os.environ.get("AZURE_ADMIN_TOKEN")
+ 
+ # e2e test is using the tsps qa service account
+tsps_sa_email = "tsps-qa@broad-dsde-qa.iam.gserviceaccount.com"
 
-if args.tsps_sa_token:
-    azure_tsps_sa_token = args.tsps_sa_token
-else:
-    azure_tsps_sa_token = os.environ.get("AZURE_TSPS_SA_TOKEN")
+bee_name = os.environ.get("BEE_NAME")
+env_string = bee_name + ".bee.envs-terra.bio"
 
-if args.admin_token:
-    azure_admin_token = args.admin_token
-else:
-    azure_admin_token = os.environ.get("AZURE_ADMIN_TOKEN")
-
-if args.tsps_sa_email:
-    tsps_sa_email = args.tsps_sa_email
-else:
-    # e2e test is using the tsps qa service account
-    tsps_sa_email = "tsps-qa@broad-dsde-qa.iam.gserviceaccount.com"
-
-if args.env:
-    if args.is_bee:
-        env_string = f"{args.env}.bee.envs-terra.bio"
-    else:
-        env_string = f"dsde-{args.env}.broadinstitute.org"
-else:
-    bee_name = os.environ.get("BEE_NAME")
-    env_string = bee_name + ".bee.envs-terra.bio"
-
-if args.billing_project:
-    billing_project_name = args.billing_project
-else:
-    billing_project_name = os.environ.get("BILLING_PROJECT_NAME")
-
-if args.workspace_name:
-    workspace_name = args.workspace_name
-else:
-    workspace_name = ""
+billing_project_name = os.environ.get("BILLING_PROJECT_NAME")
+workspace_name = ""
 
 rawls_url = f"https://rawls.{env_string}"
 leo_url = f"https://leonardo.{env_string}"
@@ -304,18 +161,9 @@ try:
     logging.info("Starting Workflows Azure E2E test...")
     logging.info(f"billing project: {billing_project_name}, env_string: {env_string}")
 
-    if workspace_name == "":
-        workspace_id = None
-    else:
-        # Check if workspace exists already
-        logging.info(f"Checking if workspace {billing_project_name}/{workspace_name} exists...")
-        workspace_id = workspace_exists(billing_project_name, workspace_name, rawls_url, azure_user_token)
-        logging.info(f"Workspace {'already exists' if workspace_id else 'does not yet exist'}")
-
-    if not(workspace_id):
-        # Create workspace
-        logging.info("Creating workspace...")
-        workspace_id, workspace_name = create_workspace(billing_project_name, azure_user_token, rawls_url, workspace_name)
+    # Create workspace
+    logging.info("Creating workspace...")
+    workspace_id, workspace_name = create_workspace(billing_project_name, azure_user_token, rawls_url, workspace_name)
 
     # sleep for 1 minute to allow apps that auto-launch to start provisioning
     logging.info("Sleeping for 1 minute to allow apps that auto-launch to start provisioning...")
@@ -351,10 +199,7 @@ try:
     if cbas_url == "":
         raise Exception(f"WORKFLOWS app not ready or errored out for workspace {workspace_id}")
 
-    if args.user_token:
-        token_for_cromwell_runner_app = azure_user_token
-    else:
-        token_for_cromwell_runner_app = azure_tsps_sa_token
+    token_for_cromwell_runner_app = azure_tsps_sa_token
 
     # Create CROMWELL_RUNNER app in workspace
     logging.info("creating cromwell runner app")
@@ -372,57 +217,41 @@ try:
     if wds_url == "":
         raise Exception(f"WDS app not ready or errored out for workspace {workspace_id}")
 
-    # run stuff that when this is run as not part of the e2e test
-    if args.user_token:
-        # upload data to workspace
-        logging.info("loading data into wds")
-        upload_wds_data_using_api(wds_url, workspace_id, "e2e-test/resources/tsps/imputation_beagle_hg38.tsv", "imputation_beagle_hg38")
+    # use admin endpoint to set imputation workspace id
+    logging.info("updating imputation workspace id")
+    update_imputation_pipeline_workspace_id(tsps_url, workspace_id, azure_admin_token)
 
-        method_id = create_cbas_method(cbas_url,
-                                       workspace_id,
-                                       "https://github.com/broadinstitute/warp/blob/TSPS-183_mma_beagle_imputation_hg38/pipelines/broad/arrays/imputation_beagle/ImputationBeagle.wdl",
-                                       azure_user_token)
+    # create a new imputation method that tsps will run
+    logging.info("creating imputation method")
+    method_id = create_cbas_method(cbas_url,
+                                    workspace_id,
+                                    "ImputationBeagle",
+                                    "https://github.com/broadinstitute/warp/blob/js_try_imputation_azure/pipelines/broad/arrays/imputation/hello_world_no_file_input.wdl",
+                                    azure_user_token)
 
-    # run stuff that is only part of the e2e test
-    else:
-        # use admin endpoint to set imputation workspace id
-        logging.info("updating imputation workspace id")
-        update_imputation_pipeline_workspace_id(tsps_url, workspace_id, azure_admin_token)
+    # launch tsps imputation pipeline
+    logging.info("running imputation pipeline")
+    job_id = run_imputation_pipeline(tsps_url, azure_user_token)
 
-        # create a new imputation method that tsps will run
-        logging.info("creating imputation method")
-        method_id = create_cbas_method(cbas_url,
-                                       workspace_id,
-                                       "https://github.com/broadinstitute/warp/blob/js_try_imputation_azure/pipelines/broad/arrays/imputation/hello_world_no_file_input.wdl",
-                                       azure_user_token)
-
-        # launch tsps imputation pipeline
-        logging.info("running imputation pipeline")
-        job_id = run_imputation_pipeline(tsps_url, azure_user_token)
-
-        # poll for imputation pipeline
-        logging.info("polling for imputation pipeline")
-        poll_for_imputation_job(tsps_url, job_id, azure_user_token)
-
+    # poll for imputation pipeline
+    logging.info("polling for imputation pipeline")
+    poll_for_imputation_job(tsps_url, job_id, azure_user_token)
 
 except Exception as e:
     logging.error(f"Exception(s) occurred during test. Details: {e}")
     found_exception = True
 finally:
-    if args.user_token:
-        logging.info("not cleaning up since not running as part of e2e test")
-    else:
-        # delete workspace and apps
-        logging.info("Starting workspace cleanup as part of e2e test...")
-        try:
-            delete_workspace(billing_project_name, workspace_name, rawls_url, azure_user_token)
-            logging.info("Workspace cleanup complete")
-        # Catch the exception and continue with the test since we don't want cleanup to affect the test results.
-        # We can assume that Janitor will clean up the workspace if the test fails
-        # TODO: Instead of catching exception and continuing with test, the script should fail the test once
-        #       https://broadworkbench.atlassian.net/browse/WOR-1309 is fixed
-        except Exception as e:
-            logging.warning(f"Error cleaning up workspace, test script will continue. Error details: {e}")
+    # delete workspace and apps
+    logging.info("Starting workspace cleanup as part of e2e test...")
+    try:
+        delete_workspace(billing_project_name, workspace_name, rawls_url, azure_user_token)
+        logging.info("Workspace cleanup complete")
+    # Catch the exception and continue with the test since we don't want cleanup to affect the test results.
+    # We can assume that Janitor will clean up the workspace if the test fails
+    # TODO: Instead of catching exception and continuing with test, the script should fail the test once
+    #       https://broadworkbench.atlassian.net/browse/WOR-1309 is fixed
+    except Exception as e:
+        logging.warning(f"Error cleaning up workspace, test script will continue. Error details: {e}")
 
     # Use exit(1) so that GHA will fail if an exception was found during the test
     if found_exception:
