@@ -87,7 +87,7 @@ jobs:
       # try using old v3 artifacts if newest fails
       - name: Download Artifact Legacy v3
         id: download-artifact-legacy-v3
-        if: ${{ failure() || steps.download-artifact.conclusion == 'failure' }}
+        if: ${{ steps.download-artifact.outcome == 'failure' }}
         continue-on-error: true
         uses: actions/download-artifact@v3
         with:
@@ -95,7 +95,7 @@ jobs:
           # gotta put this where the script will be run from
           path: ${{ env.CHECKOUT_PATH }}${{ env.SCRIPT_PATH }}${{ env.ARTIFACT_PATH }}
       - name: Auth to GCP
-        if: ${{ success() || steps.download-artifact.conclusion == 'success' }}
+        if: ${{ steps.download-artifact-legacy-v3.outcome == 'success' || steps.download-artifact.outcome == 'success' }}
         id: 'auth'
         uses: google-github-actions/auth@v1
         with:
