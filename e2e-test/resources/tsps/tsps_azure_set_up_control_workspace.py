@@ -23,7 +23,7 @@ sys.path.append(grandparent)
 # importing
 from workspace_helper import create_workspace, share_workspace
 from app_helper import create_app, poll_for_app_url
-from helper import create_cbas_method
+from cbas_helper import create_cbas_method
 
 
 if __name__ == "__main__":
