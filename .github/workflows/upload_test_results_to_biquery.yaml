@@ -77,6 +77,16 @@ jobs:
           pip install -r requirements.txt
           pip install --upgrade google-cloud-bigquery
       - name: Download Artifact
+        id: download-artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact }}
+          # gotta put this where the script will be run from
+          path: ${{ env.CHECKOUT_PATH }}${{ env.SCRIPT_PATH }}${{ env.ARTIFACT_PATH }}
+      # try using old v3 artifacts if newest fails
+      - name: Download Artifact Legacy v3
+        id: download-artifact-legacy-v3
+        if: success() || steps.download-artifact.conclusion == 'failure'
         uses: actions/download-artifact@v3
         with:
           name: ${{ inputs.artifact }}
