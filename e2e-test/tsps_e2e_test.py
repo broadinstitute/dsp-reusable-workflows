@@ -199,15 +199,13 @@ try:
     if cbas_url == "":
         raise Exception(f"WORKFLOWS app not ready or errored out for workspace {workspace_id}")
 
-    token_for_cromwell_runner_app = azure_tsps_sa_token
-
-    # Create CROMWELL_RUNNER app in workspace
+    # Create CROMWELL_RUNNER app in workspace for the TSPS SA
     logging.info("creating cromwell runner app")
-    create_app(workspace_id, leo_url, 'CROMWELL_RUNNER_APP', 'USER_PRIVATE', token_for_cromwell_runner_app)
+    create_app(workspace_id, leo_url, 'CROMWELL_RUNNER_APP', 'USER_PRIVATE', azure_tsps_sa_token)
 
     # check that Cromwell Runner is ready; if not fail the test after 10 minutes of polling
     logging.info(f"Polling to check if CROMWELL_RUNNER app is ready in workspace {workspace_id}...")
-    cromwell_url = poll_for_app_url(workspace_id, 'CROMWELL_RUNNER_APP', 'cromwell-runner', token_for_cromwell_runner_app, leo_url)
+    cromwell_url = poll_for_app_url(workspace_id, 'CROMWELL_RUNNER_APP', 'cromwell-runner', azure_tsps_sa_token, leo_url)
     if cromwell_url == "":
         raise Exception(f"CROMWELL_RUNNER app not ready or errored out for workspace {workspace_id}")
 
