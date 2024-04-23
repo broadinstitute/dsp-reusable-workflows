@@ -87,7 +87,7 @@ jobs:
       # try using old v3 artifacts if newest fails
       - name: Download Artifact Legacy v3
         id: download-artifact-legacy-v3
-        if: success() || steps.download-artifact.conclusion == 'failure'
+        if: failure()
         continue-on-error: true
         uses: actions/download-artifact@v3
         with:
