@@ -1,6 +1,6 @@
-from workspace_helper import create_workspace, delete_workspace, share_workspace
+from workspace_helper import create_workspace, delete_workspace, share_workspace_grant_owner
 from app_helper import create_app, poll_for_app_url
-from cbas_helper import create_cbas_method
+from cbas_helper import create_cbas_github_method
 import requests
 import os
 import json
@@ -33,7 +33,7 @@ def add_user_to_billing_profile(rawls_url, billing_project_name, email_to_share,
     logging.info(f"Successfully added {email_to_share} to billing project {billing_project_name}")
 
 
-# update workspace id for imputation pipeline
+# update workspace id for imputation beagle pipeline
 def update_imputation_pipeline_workspace_id(tsps_url, workspace_id, token):
     request_body = {
         "workspaceId": f"{workspace_id}"
@@ -55,7 +55,7 @@ def update_imputation_pipeline_workspace_id(tsps_url, workspace_id, token):
     logging.info(f"successfully updated imputation pipeline workspace id: {workspace_id}")
 
 
-# run imputation pipeline
+# run imputation beagle pipeline
 def run_imputation_pipeline(tsps_url, token):
     request_body = {
         "description": "string",
@@ -85,7 +85,7 @@ def run_imputation_pipeline(tsps_url, token):
     return response['jobReport']['id']
 
 
-# run imputation pipeline
+# poll for imputation beagle job
 def poll_for_imputation_job(tsps_url, job_id, token):
 
     # start by sleeping for 5 minutes
@@ -130,7 +130,7 @@ azure_user_token = os.environ.get("AZURE_USER_TOKEN")
 azure_tsps_sa_token = os.environ.get("AZURE_TSPS_SA_TOKEN")
 azure_admin_token = os.environ.get("AZURE_ADMIN_TOKEN")
  
- # e2e test is using the tsps qa service account
+# e2e test is using the tsps qa service account
 tsps_sa_email = "tsps-qa@broad-dsde-qa.iam.gserviceaccount.com"
 
 bee_name = os.environ.get("BEE_NAME")
@@ -176,8 +176,8 @@ try:
 
     # share created workspace with the tsps service account
     logging.info("sharing workspace with tsps qa service account")
-    share_workspace(firecloud_orch_url, billing_project_name, workspace_name,
-                    tsps_sa_email, azure_user_token)
+    share_workspace_grant_owner(firecloud_orch_url, billing_project_name, workspace_name,
+                                tsps_sa_email, azure_user_token)
 
     # After "Multi-user Workflow: Auto app start up" phase is completed, WORKFLOWS_APP will be launched
     # automatically at workspace creation time (similar to WDS). So to prevent test failures and errors
@@ -221,11 +221,11 @@ try:
 
     # create a new imputation method that tsps will run
     logging.info("creating imputation method")
-    method_id = create_cbas_method(cbas_url,
-                                    workspace_id,
+    method_id = create_cbas_github_method(cbas_url,
+                                          workspace_id,
                                     "ImputationBeagle",
                                     "https://github.com/broadinstitute/warp/blob/js_try_imputation_azure/pipelines/broad/arrays/imputation/hello_world_no_file_input.wdl",
-                                    azure_user_token)
+                                          azure_user_token)
 
     # launch tsps imputation pipeline
     logging.info("running imputation pipeline")

@@ -4,7 +4,7 @@ import requests
 
 
 # Create imputation method in CBAS
-def create_cbas_method(cbas_url, workspace_id, method_name, github_url, token):
+def create_cbas_github_method(cbas_url, workspace_id, method_name, github_url, token):
     request_body = {
         "method_name": method_name,
         "method_source": "GitHub",

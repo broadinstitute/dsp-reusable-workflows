@@ -103,8 +103,9 @@ def delete_workspace(billing_project_name, workspace_name, rawls_url, azure_toke
 
     raise Exception(f"Workspace wasn't deleted within 10 minutes.")
 
+
 # SHARE WORKSPACE ACTION
-def share_workspace(orch_url, billing_project_name, workspace_name, email_to_share, owner_token):
+def share_workspace_grant_owner(orch_url, billing_project_name, workspace_name, email_to_share, owner_token):
     request_body = [{
         "email": f"{email_to_share}",
         "accessLevel": "OWNER",

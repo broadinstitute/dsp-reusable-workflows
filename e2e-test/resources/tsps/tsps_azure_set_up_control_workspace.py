@@ -1,6 +1,3 @@
-# from workspace_helper import create_workspace
-# from app_helper import create_app, poll_for_app_url
-# from tsps_e2e_test import create_cbas_method, share_workspace
 import argparse
 import requests
 import time
@@ -9,7 +6,7 @@ import sys
 import os
  
 # getting the name of the directory
-# where the this file is present.
+# where this file is present.
 current = os.path.dirname(os.path.realpath(__file__))
  
 # Getting the parent directory name
@@ -21,7 +18,7 @@ grandparent = os.path.dirname(os.path.dirname(current))
 sys.path.append(grandparent)
  
 # importing
-from workspace_helper import create_workspace, share_workspace
+from workspace_helper import create_workspace, share_workspace_grant_owner
 from app_helper import create_app, poll_for_app_url
 from cbas_helper import create_cbas_method
 
@@ -70,6 +67,7 @@ logging.basicConfig(
     datefmt=LOG_DATEFORMAT,
 )
 
+
 # Check whether workspace exists
 def workspace_exists(billing_project_name, workspace_name, rawls_url, token):
     # returns workspace_id if workspace exists, or None if not
@@ -90,6 +88,7 @@ def workspace_exists(billing_project_name, workspace_name, rawls_url, token):
     
     response_json = response.json()
     return response_json['workspace']['workspaceId']
+
 
 # Upload data to WDS
 def upload_wds_data(wds_url, workspace_id, tsv_file_name, record_name, token):
@@ -134,7 +133,7 @@ if not(workspace_id):
 # share created workspace with the tsps service account
 if tsps_sa_email:
     logging.info("sharing workspace with tsps qa service account")
-    share_workspace(firecloud_orch_url, billing_project_name, workspace_name,
+    share_workspace_grant_owner(firecloud_orch_url, billing_project_name, workspace_name,
                     tsps_sa_email, azure_token)
 
 # After "Multi-user Workflow: Auto app start up" phase is completed, WORKFLOWS_APP will be launched
