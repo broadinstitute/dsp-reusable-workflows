@@ -19,7 +19,7 @@ jobs:
       - name: "Checkout dsp-reusable-workflows"
         uses: actions/checkout@v3
         with:
-          ref: mma_tsps_script_addendum
+          ref: mma_tsps_script
           repository: broadinstitute/dsp-reusable-workflows
           path: dsp-reusable-workflows/
       - name: Set up python
