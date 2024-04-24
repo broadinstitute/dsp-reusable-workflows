@@ -102,3 +102,27 @@ def delete_workspace(billing_project_name, workspace_name, rawls_url, azure_toke
         poll_count -= 1
 
     raise Exception(f"Workspace wasn't deleted within 10 minutes.")
+
+# SHARE WORKSPACE ACTION
+def share_workspace(orch_url, billing_project_name, workspace_name, email_to_share, owner_token):
+    request_body = [{
+        "email": f"{email_to_share}",
+        "accessLevel": "OWNER",
+        "canShare": True,
+        "canCompute": True
+    }]
+
+    uri = f"{orch_url}/api/workspaces/{billing_project_name}/{workspace_name}/acl?inviteUsersNotFound=true"
+    headers = {
+        "Authorization": f"Bearer {owner_token}",
+        "accept": "application/json",
+        "Content-Type": "application/json"
+    }
+
+    response = requests.patch(uri, json=request_body, headers=headers)
+    status_code = response.status_code
+
+    if status_code != 200:
+        raise Exception(response.text)
+
+    logging.info(f"Successfully shared workspace {workspace_name} with {email_to_share}")
