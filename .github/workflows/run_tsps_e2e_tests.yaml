@@ -1,0 +1,72 @@
+name: run-tsps-e2e-tests
+
+on:
+  workflow_call:
+    inputs:
+      bee-name:
+        description: 'BEE name'
+        required: true
+        type: string
+      billing-project-name:
+        description: 'Name of billing project'
+        required: true
+        type: string
+
+jobs:
+  run-e2e-test-job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout dsp-reusable-workflows"
+        uses: actions/checkout@v3
+        with:
+          ref: main
+          repository: broadinstitute/dsp-reusable-workflows
+          path: dsp-reusable-workflows/
+      - name: Set up python
+        id: setup-python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          cd dsp-reusable-workflows/e2e-test/resources/tsps/
+          pip install -r requirements.txt
+      - name: Generate OAuth2 2.0 access token for billing project owner
+        id: 'obtain_user_token'
+        uses: google-github-actions/auth@v1
+        with:
+          token_format: 'access_token'
+          workload_identity_provider: 'projects/1038484894585/locations/global/workloadIdentityPools/github-wi-pool/providers/github-wi-provider'
+          service_account: 'firecloud-qa@broad-dsde-qa.iam.gserviceaccount.com'
+          access_token_scopes: 'profile, email, openid'
+          access_token_subject: 'hermione.owner@quality.firecloud.org'
+          export_environment_variables: false
+      - name: Generate OAuth2 2.0 access token for admin user
+        id: 'obtain_admin_user_token'
+        uses: google-github-actions/auth@v1
+        with:
+          token_format: 'access_token'
+          workload_identity_provider: 'projects/1038484894585/locations/global/workloadIdentityPools/github-wi-pool/providers/github-wi-provider'
+          service_account: 'firecloud-qa@broad-dsde-qa.iam.gserviceaccount.com'
+          access_token_scopes: 'profile, email, openid'
+          access_token_subject: 'dumbledore.admin@quality.firecloud.org'
+          export_environment_variables: false
+      - name: Generate OAuth2 2.0 access token for tsps service account
+        id: 'obtain_tsps_sa_token'
+        uses: google-github-actions/auth@v1
+        with:
+          token_format: 'access_token'
+          workload_identity_provider: 'projects/1038484894585/locations/global/workloadIdentityPools/github-wi-pool/providers/github-wi-provider'
+          service_account: 'tsps-qa@broad-dsde-qa.iam.gserviceaccount.com'
+          access_token_scopes: 'profile, email, openid'
+          export_environment_variables: false
+      - name: Run e2e test
+        env:
+          BEE_NAME: ${{ inputs.bee-name }}
+          BILLING_PROJECT_NAME: ${{ inputs.billing-project-name }}
+          AZURE_USER_TOKEN: ${{ steps.obtain_user_token.outputs.access_token }}
+          AZURE_ADMIN_TOKEN: ${{ steps.obtain_admin_user_token.outputs.access_token }}
+          AZURE_TSPS_SA_TOKEN: ${{ steps.obtain_tsps_sa_token.outputs.access_token }}
+        run: |
+          cd dsp-reusable-workflows/
+          python e2e-test/tsps_e2e_test.py

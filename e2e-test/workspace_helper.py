@@ -15,6 +15,7 @@ def create_workspace(billing_project_name, azure_token, rawls_url, workspace_nam
             rawls_workspace_api = f"{rawls_url}/api/workspaces"
             workspace_name = workspace_name if workspace_name else f"e2e-test-api-workspace-{''.join(random.choices(string.ascii_lowercase, k=5))}"
             logging.info(f"Creating workspace {workspace_name} in {billing_project_name}")
+            # note that if the billing project is a protected one, the workspace will automatically be protected as well and does not need to be specified as such here
             request_body= {
                 "namespace": billing_project_name,
                 "name": workspace_name,
@@ -101,3 +102,28 @@ def delete_workspace(billing_project_name, workspace_name, rawls_url, azure_toke
         poll_count -= 1
 
     raise Exception(f"Workspace wasn't deleted within 10 minutes.")
+
+
+# SHARE WORKSPACE ACTION
+def share_workspace_grant_owner(orch_url, billing_project_name, workspace_name, email_to_share, owner_token):
+    request_body = [{
+        "email": f"{email_to_share}",
+        "accessLevel": "OWNER",
+        "canShare": True,
+        "canCompute": True
+    }]
+
+    uri = f"{orch_url}/api/workspaces/{billing_project_name}/{workspace_name}/acl?inviteUsersNotFound=true"
+    headers = {
+        "Authorization": f"Bearer {owner_token}",
+        "accept": "application/json",
+        "Content-Type": "application/json"
+    }
+
+    response = requests.patch(uri, json=request_body, headers=headers)
+    status_code = response.status_code
+
+    if status_code != 200:
+        raise Exception(response.text)
+
+    logging.info(f"Successfully shared workspace {workspace_name} with {email_to_share}")
