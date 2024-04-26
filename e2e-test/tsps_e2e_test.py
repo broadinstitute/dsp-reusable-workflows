@@ -63,7 +63,9 @@ def run_imputation_pipeline(tsps_url, token):
             "id": f'{uuid.uuid4()}'
         },
         "pipelineVersion": "string",
-        "pipelineInputs": {}
+        "pipelineInputs": {
+            "multi_sample_vcf": "this/is/a/fake/file.vcf.gz"
+        }
     }
 
     uri = f"{tsps_url}/api/pipelines/v1/imputation_beagle"
