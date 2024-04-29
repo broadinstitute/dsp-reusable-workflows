@@ -52,6 +52,11 @@ def run_workspace_app_test(cbas, wds_upload, cbas_submit_workflow, test_cloning,
         clone_id = clone_workspace(billing_project_name, workspace_name, header)
         wds_url = poll_for_app_url(clone_id, "WDS", "wds", azure_token, leo_url)
         check_wds_data(wds_url, clone_id, "test", azure_token)
+        # Once we've verified the cloned data is present, verify we can upload into the cloned workspace
+        # This tsv relies on the presence of the cloned data and also has more data types
+        clone_upload_success = upload_wds_data(wds_url, workspace_id, "resources/all_data_types.tsv", "data", azure_token)
+        assert clone_upload_success
+
 
     if delete_created_workspace:
         test_cleanup(billing_project_name, workspace_name, azure_token)

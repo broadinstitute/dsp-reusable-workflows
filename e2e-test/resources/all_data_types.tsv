@@ -1,0 +1,5 @@
+data_id	greeting	unicode	json	date	embedded characters	double	long	z_array_of_string	z_long_array	z_double_array	z_z_boolean_array	zz_array_of_date	zz_array_of_datetime    bool    datetime    relation    file	relation_array	file_array
+a	hello	🚀	"{""foo"":""bar""}"	2021-01-10	"test
+Foo
+Bar"	-2.287	-99	[“test1”, “test2”]		[-11.2221, -11]	[true, false, False]	[“2021-10-03”, “2022-10-03”]	[“2021-10-03T19:00:00”, “2022-10-03T23:01:00”]	true	2022-11-03T04:36:20	terra-wds:/sample/HG02081	https://account_name.blob.core.windows.net/container-1/blob1	[terra-wds:/sample/HG01986, terra-wds:/sample/NA18533]	[https://account_name.blob.core.windows.net/container-1/blob2, https://account_name1.blob.core.windows.net/container-1/blob1]
+b	goodbye	😈		2022-11-01	"Two Beers	Or	Not Two Beers?"	3.14	1147417414841	[“98”, “99”]	[199, 12]			[]	[“2021-10-03T19:00:00”, “2022-10-03T23:01:00”]
