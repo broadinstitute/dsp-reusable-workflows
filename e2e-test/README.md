@@ -1,4 +1,4 @@
-To run an e2e test on your own bee, outside of GHA:
+To run an e2e test on your own BEE, outside of GHA:
 ```commandline
 cd e2e-test
 export BEE_NAME={your-bee-name}
