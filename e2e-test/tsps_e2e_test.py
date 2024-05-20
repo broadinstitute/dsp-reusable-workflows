@@ -1,6 +1,7 @@
 from workspace_helper import create_workspace, delete_workspace, share_workspace_grant_owner
 from app_helper import create_app, poll_for_app_url
 from cbas_helper import create_cbas_github_method
+import wds_client
 import requests
 import os
 import json
@@ -64,7 +65,8 @@ def run_imputation_pipeline(tsps_url, token):
         },
         "pipelineVersion": "string",
         "pipelineInputs": {
-            "multi_sample_vcf": "this/is/a/fake/file.vcf.gz"
+            "multi_sample_vcf": "this/is/a/fake/file.vcf.gz",
+            "output_basename": "fake_basename"
         }
     }
 
@@ -124,6 +126,27 @@ def poll_for_imputation_job(tsps_url, job_id, token):
         poll_count -= 1
 
     raise Exception(f"tsps pipeline did not complete in 25 minutes")
+
+
+def retrieve_wds_row(wds_url, workspace_id, record_type, record_id, azure_token):
+    version="v0.2"
+    api_client = wds_client.ApiClient(header_name='Authorization', header_value="Bearer " + azure_token)
+    api_client.configuration.host = wds_url
+
+    # records client is used to interact with Records in the data table
+    records_client = wds_client.RecordsApi(api_client)
+
+    response = records_client.get_record(workspace_id, version, record_type, record_id)
+    logging.debug(response)
+
+    return response
+
+
+def check_for_imputation_outputs_in_wds(wds_url, workspace_id, job_id, azure_token):
+    record_type = "imputation_beagle"
+    wds_row = retrieve_wds_row(wds_url, workspace_id, record_type, job_id, azure_token)
+    row_attributes = wds_row.attributes
+    assert row_attributes["imputed_multi_sample_vcf"] != None, f"Output imputed_multi_sample_vcf not found in WDS {record_type} table"
 
 
 # Setup configuration
@@ -226,7 +249,7 @@ try:
     method_id = create_cbas_github_method(cbas_url,
                                           workspace_id,
                                     "ImputationBeagle",
-                                    "https://github.com/broadinstitute/warp/blob/js_try_imputation_azure/pipelines/broad/arrays/imputation/hello_world_no_file_input.wdl",
+                                    "https://github.com/DataBiosphere/terra-scientific-pipelines-service/blob/main/pipelines/testing/ImputationBeagleEmpty.wdl",
                                           azure_user_token)
 
     # launch tsps imputation pipeline
@@ -236,6 +259,9 @@ try:
     # poll for imputation pipeline
     logging.info("polling for imputation pipeline")
     poll_for_imputation_job(tsps_url, job_id, azure_user_token)
+
+    # check that output has been written to WDS
+    check_for_imputation_outputs_in_wds(wds_url, job_id)
 
 except Exception as e:
     logging.error(f"Exception(s) occurred during test. Details: {e}")
