@@ -128,6 +128,7 @@ def poll_for_imputation_job(tsps_url, job_id, token):
     raise Exception(f"tsps pipeline did not complete in 25 minutes")
 
 
+# retrieve a specified row from a specified table in a specified workspace's WDS
 def retrieve_wds_row(wds_url, workspace_id, record_type, record_id, azure_token):
     version="v0.2"
     api_client = wds_client.ApiClient(header_name='Authorization', header_value="Bearer " + azure_token)
@@ -142,10 +143,13 @@ def retrieve_wds_row(wds_url, workspace_id, record_type, record_id, azure_token)
     return response
 
 
+# run checks on the imputation output written to WDS
 def check_for_imputation_outputs_in_wds(wds_url, workspace_id, job_id, azure_token):
     record_type = "imputation_beagle"
     wds_row = retrieve_wds_row(wds_url, workspace_id, record_type, job_id, azure_token)
     row_attributes = wds_row.attributes
+
+    # check for one of the expected outputs (could add more checks here)
     assert row_attributes["imputed_multi_sample_vcf"] != None, f"Output imputed_multi_sample_vcf not found in WDS {record_type} table"
 
 
