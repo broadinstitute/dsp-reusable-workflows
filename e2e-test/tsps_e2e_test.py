@@ -92,6 +92,7 @@ def run_imputation_pipeline(tsps_url, token):
 # poll for imputation beagle job
 def poll_for_imputation_job(tsps_url, job_id, token):
 
+    logging.info("sleeping for 5 minutes so pipeline has time to complete")
     # start by sleeping for 5 minutes
     time.sleep(5 * 60)
 
@@ -150,7 +151,11 @@ def check_for_imputation_outputs_in_wds(wds_url, workspace_id, job_id, azure_tok
     row_attributes = wds_row.attributes
 
     # check for one of the expected outputs (could add more checks here)
-    assert row_attributes["imputed_multi_sample_vcf"] != None, f"Output imputed_multi_sample_vcf not found in WDS {record_type} table"
+    outputs_to_check = ["imputed_multi_sample_vcf"]
+    for output_key in outputs_to_check:
+        assert row_attributes[output_key] != None, f"Output {output_key} not found in WDS {record_type} table"
+
+    logging.info(f"Confirmed expected imputation outputs in WDS for job {job_id}")
 
 
 # Setup configuration
@@ -265,7 +270,7 @@ try:
     poll_for_imputation_job(tsps_url, job_id, azure_user_token)
 
     # check that output has been written to WDS
-    check_for_imputation_outputs_in_wds(wds_url, job_id)
+    check_for_imputation_outputs_in_wds(wds_url, job_id, job_id, azure_user_token)
 
 except Exception as e:
     logging.error(f"Exception(s) occurred during test. Details: {e}")
