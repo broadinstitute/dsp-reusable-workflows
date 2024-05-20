@@ -133,10 +133,14 @@ def poll_for_imputation_job(tsps_url, job_id, token):
 def retrieve_wds_row(wds_url, workspace_id, record_type, record_id, azure_token):
     version="v0.2"
     api_client = wds_client.ApiClient(header_name='Authorization', header_value="Bearer " + azure_token)
+    
+    logging.info(f"setting wds api client url to {wds_url}")
     api_client.configuration.host = wds_url
 
     # records client is used to interact with Records in the data table
     records_client = wds_client.RecordsApi(api_client)
+
+    logging.info(f"querying WDS for record {record_id} in {record_type} table in workspace {workspace_id}")
 
     response = records_client.get_record(workspace_id, version, record_type, record_id)
     logging.debug(response)
@@ -270,7 +274,7 @@ try:
     poll_for_imputation_job(tsps_url, job_id, azure_user_token)
 
     # check that output has been written to WDS
-    check_for_imputation_outputs_in_wds(wds_url, job_id, job_id, azure_user_token)
+    check_for_imputation_outputs_in_wds(wds_url, workspace_id, job_id, azure_user_token)
 
 except Exception as e:
     logging.error(f"Exception(s) occurred during test. Details: {e}")
