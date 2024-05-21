@@ -217,7 +217,7 @@ if not(tsps_sa_token): # not meant to be used with TSPS
                     azure_token)
 
 # empty wdl:
-wdl_url = "https://github.com/DataBiosphere/terra-scientific-pipelines-service/blob/TSPS-198_mma_add_beagle_wdl/pipelines/testing/ImputationBeagleEmpty.wdl"
+wdl_url = "https://github.com/DataBiosphere/terra-scientific-pipelines-service/blob/main/pipelines/testing/ImputationBeagleEmpty.wdl"
 # working wdl:
 # wdl_url = "https://github.com/broadinstitute/warp/blob/TSPS-183_mma_beagle_imputation_hg38/pipelines/broad/arrays/imputation_beagle/ImputationBeaglePreChunk.wdl"
 
