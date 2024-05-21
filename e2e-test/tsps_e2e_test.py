@@ -1,6 +1,7 @@
 from workspace_helper import create_workspace, delete_workspace, share_workspace_grant_owner
 from app_helper import create_app, poll_for_app_url
 from cbas_helper import create_cbas_github_method
+from helper import add_user_to_billing_profile
 import wds_client
 import requests
 import os
@@ -8,30 +9,6 @@ import json
 import uuid
 import time
 import logging
-
-
-def add_user_to_billing_profile(rawls_url, billing_project_name, email_to_share, owner_token):
-    request_body = {
-        "membersToAdd": [
-            {"email": f"{email_to_share}", "role": "User"}
-        ],
-        "membersToRemove": []
-    }
-
-    uri = f"{rawls_url}/api/billing/v2/{billing_project_name}/members?inviteUsersNotFound=true"
-    headers = {
-        "Authorization": f"Bearer {owner_token}",
-        "accept": "application/json",
-        "Content-Type": "application/json"
-    }
-
-    response = requests.patch(uri, json=request_body, headers=headers)
-    status_code = response.status_code
-
-    if status_code != 204:
-        raise Exception(response.text)
-
-    logging.info(f"Successfully added {email_to_share} to billing project {billing_project_name}")
 
 
 # update workspace id for imputation beagle pipeline

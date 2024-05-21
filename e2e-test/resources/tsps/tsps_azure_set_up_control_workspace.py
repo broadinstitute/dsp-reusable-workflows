@@ -21,6 +21,7 @@ sys.path.append(grandparent)
 from workspace_helper import create_workspace, share_workspace_grant_owner
 from app_helper import create_app, poll_for_app_url
 from cbas_helper import create_cbas_github_method
+from helper import add_user_to_billing_profile, upload_wds_data
 
 
 if __name__ == "__main__":
@@ -91,49 +92,6 @@ def workspace_exists(billing_project_name, workspace_name, rawls_url, token):
     
     response_json = response.json()
     return response_json['workspace']['workspaceId']
-
-
-def add_user_to_billing_profile(rawls_url, billing_project_name, email_to_share, owner_token):
-    request_body = {
-        "membersToAdd": [
-            {"email": f"{email_to_share}", "role": "User"}
-        ],
-        "membersToRemove": []
-    }
-
-    uri = f"{rawls_url}/api/billing/v2/{billing_project_name}/members?inviteUsersNotFound=true"
-    headers = {
-        "Authorization": f"Bearer {owner_token}",
-        "accept": "application/json",
-        "Content-Type": "application/json"
-    }
-
-    response = requests.patch(uri, json=request_body, headers=headers)
-    status_code = response.status_code
-
-    if status_code != 204:
-        raise Exception(response.text)
-
-    logging.info(f"Successfully added {email_to_share} to billing project {billing_project_name}")
-
-
-# Upload data to WDS
-def upload_wds_data(wds_url, workspace_id, tsv_file_name, record_name, token):
-    #open TSV file in read mode
-    with open(tsv_file_name) as tsv_file:
-        request_file = tsv_file.read()
-
-    uri = f"{wds_url}/{workspace_id}/tsv/v0.2/{record_name}"
-    headers = {"Authorization": f"Bearer {token}"}
-
-    response = requests.post(uri, files={'records':request_file}, headers=headers)
-
-    status_code = response.status_code
-
-    if status_code != 200:
-        raise Exception(response.text)
-
-    logging.info(f"Successfully uploaded data to WDS. Response: {response.json()}")
 
 
 # ---------------------- Start TSPS Imputation Workspace Setup ----------------------
@@ -213,13 +171,16 @@ if not(tsps_sa_token): # not meant to be used with TSPS
     # upload data to workspace
     upload_wds_data(wds_url, 
                     workspace_id, 
-                    "e2e-test/resources/tsps/imputation_beagle_hg38.tsv", "imputation_beagle",
+                    "e2e-test/resources/tsps/imputation_beagle_hg38.tsv", 
+                    "imputation_beagle",
                     azure_token)
 
 # empty wdl:
-wdl_url = "https://github.com/DataBiosphere/terra-scientific-pipelines-service/blob/main/pipelines/testing/ImputationBeagleEmpty.wdl"
+# wdl_url = "https://github.com/DataBiosphere/terra-scientific-pipelines-service/blob/main/pipelines/testing/ImputationBeagleEmpty.wdl"
 # working wdl:
-# wdl_url = "https://github.com/broadinstitute/warp/blob/TSPS-183_mma_beagle_imputation_hg38/pipelines/broad/arrays/imputation_beagle/ImputationBeaglePreChunk.wdl"
+wdl_url = "https://github.com/broadinstitute/warp/blob/TSPS-183_mma_beagle_imputation_hg38/pipelines/broad/arrays/imputation_beagle/ImputationBeaglePreChunk.wdl"
+
+logging.info(f"Adding {wdl_url} to workspace")
 
 # create a new method
 method_id = create_cbas_github_method(cbas_url, 
