@@ -20,7 +20,8 @@ sys.path.append(grandparent)
 # importing
 from workspace_helper import create_workspace, share_workspace_grant_owner
 from app_helper import create_app, poll_for_app_url
-from cbas_helper import create_cbas_method
+from cbas_helper import create_cbas_github_method
+from helper import add_user_to_billing_profile, upload_wds_data
 
 
 if __name__ == "__main__":
@@ -28,7 +29,9 @@ if __name__ == "__main__":
     parser.add_argument('-t', '--user_token', required=False,
         help='token for user to authenticate Terra API calls')
     parser.add_argument('-m', '--tsps_sa_email', required=False,
-                        help='email of tsps service account to share workspace/billing project with')
+        help='email of tsps service account to share workspace/billing project with')
+    parser.add_argument('--tsps_sa_token', required=False,
+        help='token for TSPS SA to authenticate Terra API calls; if populated, will create CRA for TSPS SA')
     parser.add_argument('-e', '--env', required=False, default='dev',
         help='environment. e.g. `dev` (default) or bee name `terra-marymorg`')
     parser.add_argument('-p', '--billing_project', required=False,
@@ -51,10 +54,11 @@ else:
 billing_project_name = args.billing_project
 workspace_name = args.workspace_name
 tsps_sa_email = args.tsps_sa_email
+tsps_sa_token = args.tsps_sa_token
 
 rawls_url = f"https://rawls.{env_string}"
 leo_url = f"https://leonardo.{env_string}"
-firecloud_orch_url = f"https://firecloudorch.{env_string}"
+firecloud_orch_url = f"https://firecloud-orchestration.{env_string}" # this doesn't work for BEEs; BEES it's firecloudorch.{env_string}
 tsps_url = f"https://tsps.{env_string}"
 
 # configure logging format
@@ -90,25 +94,6 @@ def workspace_exists(billing_project_name, workspace_name, rawls_url, token):
     return response_json['workspace']['workspaceId']
 
 
-# Upload data to WDS
-def upload_wds_data(wds_url, workspace_id, tsv_file_name, record_name, token):
-    #open TSV file in read mode
-    with open(tsv_file_name) as tsv_file:
-        request_file = tsv_file.read()
-
-    uri = f"{wds_url}/{workspace_id}/tsv/v0.2/{record_name}"
-    headers = {"Authorization": f"Bearer {token}"}
-
-    response = requests.post(uri, files={'records':request_file}, headers=headers)
-
-    status_code = response.status_code
-
-    if status_code != 200:
-        raise Exception(response.text)
-
-    logging.info(f"Successfully uploaded data to WDS. Response: {response.json()}")
-
-
 # ---------------------- Start TSPS Imputation Workspace Setup ----------------------
 
 logging.info("Starting TSPS imputation workspace setup...")
@@ -132,9 +117,15 @@ if not(workspace_id):
 
 # share created workspace with the tsps service account
 if tsps_sa_email:
-    logging.info("sharing workspace with tsps qa service account")
+    logging.info(f"sharing workspace with {tsps_sa_email}")
     share_workspace_grant_owner(firecloud_orch_url, billing_project_name, workspace_name,
                     tsps_sa_email, azure_token)
+    
+    # add tsps service account to billing project, this can be removed once
+    # https://broadworkbench.atlassian.net/browse/WOR-1620 is addressed
+    logging.info(f"adding {tsps_sa_email} to billing project {billing_project_name}")
+    add_user_to_billing_profile(rawls_url, billing_project_name, tsps_sa_email, azure_token)
+
 
 # After "Multi-user Workflow: Auto app start up" phase is completed, WORKFLOWS_APP will be launched
 # automatically at workspace creation time (similar to WDS). So to prevent test failures and errors
@@ -157,7 +148,12 @@ if cbas_url == "":
     raise Exception(f"WORKFLOWS app not ready or errored out for workspace {workspace_id}")
 
 # Create CROMWELL_RUNNER app in workspace
-create_app(workspace_id, leo_url, 'CROMWELL_RUNNER_APP', 'USER_PRIVATE', azure_token)
+if tsps_sa_token:
+    # create cromwell runner app for TSPS SA
+    create_app(workspace_id, leo_url, 'CROMWELL_RUNNER_APP', 'USER_PRIVATE', tsps_sa_token)
+else:   
+    # create cromwell runner app for calling user
+    create_app(workspace_id, leo_url, 'CROMWELL_RUNNER_APP', 'USER_PRIVATE', azure_token)
 
 # check that Cromwell Runner is ready; if not fail the test after 10 minutes of polling
 logging.info(f"Polling to check if CROMWELL_RUNNER app is ready in workspace {workspace_id}...")
@@ -171,15 +167,24 @@ wds_url = poll_for_app_url(workspace_id, 'WDS', 'wds', azure_token, leo_url)
 if wds_url == "":
     raise Exception(f"WDS app not ready or errored out for workspace {workspace_id}")
 
-# upload data to workspace
-upload_wds_data(wds_url, 
-                workspace_id, 
-                "e2e-test/resources/tsps/imputation_beagle_hg38.tsv", "imputation_beagle_hg38",
-                azure_token)
+if not(tsps_sa_token): # not meant to be used with TSPS
+    # upload data to workspace
+    upload_wds_data(wds_url, 
+                    workspace_id, 
+                    "e2e-test/resources/tsps/imputation_beagle_hg38.tsv", 
+                    "imputation_beagle",
+                    azure_token)
+
+# empty wdl:
+# wdl_url = "https://github.com/DataBiosphere/terra-scientific-pipelines-service/blob/main/pipelines/testing/ImputationBeagleEmpty.wdl"
+# working wdl:
+wdl_url = "https://github.com/broadinstitute/warp/blob/TSPS-183_mma_beagle_imputation_hg38/pipelines/broad/arrays/imputation_beagle/ImputationBeaglePreChunk.wdl"
+
+logging.info(f"Adding {wdl_url} to workspace")
 
 # create a new method
-method_id = create_cbas_method(cbas_url, 
+method_id = create_cbas_github_method(cbas_url, 
                                workspace_id, 
                                "ImputationBeagle",
-                               "https://github.com/broadinstitute/warp/blob/TSPS-183_mma_beagle_imputation_hg38/pipelines/broad/arrays/imputation_beagle/ImputationBeagle.wdl", 
+                               wdl_url, 
                                azure_token)

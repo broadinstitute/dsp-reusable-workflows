@@ -143,3 +143,27 @@ def test_cleanup(billing_project_name, workspace_name, azure_token):
     # Catch the exception and continue with the test since we don't want cleanup to affect the test results.
     except Exception as e:
         logging.warning(f"Error cleaning up workspace, test script will continue. Error details: {e}")
+
+
+def add_user_to_billing_profile(rawls_url, billing_project_name, email_to_share, owner_token):
+    request_body = {
+        "membersToAdd": [
+            {"email": f"{email_to_share}", "role": "User"}
+        ],
+        "membersToRemove": []
+    }
+
+    uri = f"{rawls_url}/api/billing/v2/{billing_project_name}/members?inviteUsersNotFound=true"
+    headers = {
+        "Authorization": f"Bearer {owner_token}",
+        "accept": "application/json",
+        "Content-Type": "application/json"
+    }
+
+    response = requests.patch(uri, json=request_body, headers=headers)
+    status_code = response.status_code
+
+    if status_code != 204:
+        raise Exception(response.text)
+
+    logging.info(f"Successfully added {email_to_share} as a User to billing project {billing_project_name}")
