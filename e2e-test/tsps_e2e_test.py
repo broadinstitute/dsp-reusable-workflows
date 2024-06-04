@@ -47,7 +47,7 @@ def run_imputation_pipeline(tsps_url, token):
         }
     }
 
-    uri = f"{tsps_url}/api/pipelines/v1/imputation_beagle"
+    uri = f"{tsps_url}/api/pipelineruns/v1/imputation_beagle"
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json",
@@ -75,7 +75,7 @@ def poll_for_imputation_job(tsps_url, job_id, token):
 
     # waiting for 25 total minutes, initial 5 minutes then 20 intervals of 1 minute each
     poll_count = 20
-    uri = f"{tsps_url}/api/pipelines/v1/imputation_beagle/result/{job_id}"
+    uri = f"{tsps_url}/api/pipelineruns/v1/imputation_beagle/result/{job_id}"
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json",
