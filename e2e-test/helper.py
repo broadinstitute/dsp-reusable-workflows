@@ -26,31 +26,7 @@ def setup(bee_name):
     logging.debug(f"leo_url: {leo_url}")
     return workspace_manager_url, rawls_url, leo_url
 
-# CREATE WORKSPACE ACTION WITH APP CREATION
-def create_workspace_with_cromwell_app(cbas, billing_project_name, azure_token, workspace_name = ""):
-    workspace_id, workspace_name = create_workspace(billing_project_name, azure_token, rawls_url, workspace_name)
-    
-    # enable CBAS if specified
-    header = {
-      "Authorization": "Bearer " + azure_token,
-      "accept": "application/json"
-    }
-
-    if cbas is True:
-        logging.info(f"Enabling CBAS for workspace {workspace_id}")
-        start_cbas_url = f"{leo_url}/api/apps/v2/{workspace_id}/terra-app-{str(uuid.uuid4())}";
-        logging.debug(f"start_cbas_url: {start_cbas_url}")
-        request_body2 = {
-          "appType": "CROMWELL"
-        } 
-        
-        cbas_response = requests.post(url=start_cbas_url, json=request_body2, headers=header)
-        # will return 202 or error
-        logging.debug(cbas_response)
-
-    return workspace_id, workspace_name
-
-# UPLOAD DATA TO WORSPACE DATA SERVICE IN A WORKSPACE
+# UPLOAD DATA TO WORKSPACE DATA SERVICE IN A WORKSPACE
 def upload_wds_data(wds_url, current_workspaceId, tsv_file_name, recordName, azure_token):
     version="v0.2"
     api_client = wds_client.ApiClient(header_name='Authorization', header_value="Bearer " + azure_token)
@@ -72,42 +48,6 @@ def upload_wds_data(wds_url, current_workspaceId, tsv_file_name, recordName, azu
     assert response.records_modified == count, f"Uploading to wds failed: {response.reason}"
     # return true if upload succeeded
     return response.records_modified == count
-
-
-# KICK OFF A WORKFLOW INSIDE A WORKSPACE
-def submit_workflow_assemble_refbased(workspaceId, dataFile, azure_token):
-    cbas_url = poll_for_app_url(workspaceId, "CROMWELL", "cbas", azure_token, leo_url)
-    logging.debug(cbas_url)
-    #open text file in read mode
-    text_file = open(dataFile, "r")
-    request_body = text_file.read();
-    text_file.close()
-    
-    cbas_run_sets_api = f"{cbas_url}/api/batch/v1/run_sets"
-    
-    headers = {"Authorization": azure_token,
-               "accept": "application/json", 
-              "Content-Type": "application/json"}
-    
-    response = requests.post(cbas_run_sets_api, data=request_body, headers=headers)
-    # example of what it returns:
-    # {
-    #   "run_set_id": "cdcdc570-f6f3-4425-9404-4d70cd74ce2a",
-    #   "runs": [
-    #     {
-    #       "run_id": "0a72f308-4931-436b-bbfe-55856f7c1a39",
-    #       "state": "UNKNOWN",
-    #       "errors": "null"
-    #     },
-    #     {
-    #       "run_id": "eb400221-efd7-4e1a-90c9-952f32a10b60",
-    #       "state": "UNKNOWN",
-    #       "errors": "null"
-    #     }
-    #   ],
-    #   "state": "RUNNING"
-    # }
-    logging.debug(response.json())
 
 def clone_workspace(billing_project_name, workspace_name, header):
     clone_workspace_api = f"{rawls_url}/api/workspaces/{billing_project_name}/{workspace_name}/clone";
