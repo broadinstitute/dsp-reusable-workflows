@@ -2,7 +2,9 @@ from workspace_helper import create_workspace, delete_workspace, share_workspace
 from app_helper import create_app, poll_for_app_url
 from cbas_helper import create_cbas_github_method
 from helper import add_user_to_billing_profile
-import wds_client
+
+from azure.storage.blob import BlobClient
+
 import requests
 import os
 import json
@@ -92,7 +94,7 @@ def poll_for_imputation_job(tsps_url, job_id, token):
             logging.info(f'tsps pipeline completed with 200 status')
             if response['jobReport']['status'] == 'SUCCEEDED':
                 logging.info(f"tsps pipeline has succeeded: {response}")
-                return
+                return response['pipelineOutput']
             else:
                 raise Exception(f'tsps pipeline failed: {response}')
         elif status_code == 202:
@@ -105,39 +107,12 @@ def poll_for_imputation_job(tsps_url, job_id, token):
 
     raise Exception(f"tsps pipeline did not complete in 25 minutes")
 
-
-# retrieve a specified row from a specified table in a specified workspace's WDS
-def retrieve_wds_row(wds_url, workspace_id, record_type, record_id, azure_token):
-    version="v0.2"
-    api_client = wds_client.ApiClient(header_name='Authorization', header_value="Bearer " + azure_token)
-    
-    logging.info(f"setting wds api client url to {wds_url}")
-    api_client.configuration.host = wds_url
-
-    # records client is used to interact with Records in the data table
-    records_client = wds_client.RecordsApi(api_client)
-
-    logging.info(f"querying WDS for record {record_id} in {record_type} table in workspace {workspace_id}")
-
-    response = records_client.get_record(workspace_id, version, record_type, record_id)
-    logging.debug(response)
-
-    return response
-
-
-# run checks on the imputation output written to WDS
-def check_for_imputation_outputs_in_wds(wds_url, workspace_id, job_id, azure_token):
-    record_type = "imputation_beagle"
-    wds_row = retrieve_wds_row(wds_url, workspace_id, record_type, job_id, azure_token)
-    row_attributes = wds_row.attributes
-
-    # check for one of the expected outputs (could add more checks here)
-    outputs_to_check = ["imputed_multi_sample_vcf"]
-    for output_key in outputs_to_check:
-        assert row_attributes[output_key] != None, f"Output {output_key} not found in WDS {record_type} table"
-
-    logging.info(f"Confirmed expected imputation outputs in WDS for job {job_id}")
-
+# download a file with azcopy
+def download_with_azcopy(sas_url):
+    blob_client = BlobClient.from_blob_url(sas_url)
+    with open(file=blob_client.blob_name, mode="wb") as blob_file:
+        download_stream = blob_client.download_blob()
+        blob_file.write(download_stream.readall())
 
 # Setup configuration
 # The environment variables are injected as part of the e2e test setup which does not pass in any args
@@ -248,10 +223,13 @@ try:
 
     # poll for imputation pipeline
     logging.info("polling for imputation pipeline")
-    poll_for_imputation_job(tsps_url, job_id, azure_user_token)
+    pipeline_output = poll_for_imputation_job(tsps_url, job_id, azure_user_token)
 
-    # check that output has been written to WDS
-    check_for_imputation_outputs_in_wds(wds_url, workspace_id, job_id, azure_user_token)
+    # grab data using azcopy
+    for key, value in pipeline_output.items():
+        logging.info(f"attempting to retrieve {key} output")
+        download_with_azcopy(value)
+
 
 except Exception as e:
     logging.error(f"Exception(s) occurred during test. Details: {e}")
