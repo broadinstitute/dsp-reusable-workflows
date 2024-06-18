@@ -111,7 +111,7 @@ def poll_for_imputation_job(tsps_url, job_id, token):
 # download a file with azcopy
 def download_with_azcopy(sas_url):
     blob_client = BlobClient.from_blob_url(sas_url)
-    local_file = blob_client.blob_name.split('/')[-1]
+    local_file = blob_client.blob_name.split('/')[-1] # get the file name without directories
     with open(file=local_file, mode="wb") as blob_file:
         download_stream = blob_client.download_blob()
         blob_file.write(download_stream.readall())
