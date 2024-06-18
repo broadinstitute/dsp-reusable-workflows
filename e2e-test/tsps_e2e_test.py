@@ -68,7 +68,7 @@ def run_imputation_pipeline(tsps_url, token):
     return response['jobReport']['id']
 
 
-# poll for imputation beagle job
+# poll for imputation beagle job; if successful, return the pipelineOutput object (dict)
 def poll_for_imputation_job(tsps_url, job_id, token):
 
     logging.info("sleeping for 5 minutes so pipeline has time to complete")
@@ -94,6 +94,7 @@ def poll_for_imputation_job(tsps_url, job_id, token):
             logging.info(f'tsps pipeline completed with 200 status')
             if response['jobReport']['status'] == 'SUCCEEDED':
                 logging.info(f"tsps pipeline has succeeded: {response}")
+                # return the pipeline output dictionary
                 return response['pipelineOutput']
             else:
                 raise Exception(f'tsps pipeline failed: {response}')
@@ -110,7 +111,8 @@ def poll_for_imputation_job(tsps_url, job_id, token):
 # download a file with azcopy
 def download_with_azcopy(sas_url):
     blob_client = BlobClient.from_blob_url(sas_url)
-    with open(file=blob_client.blob_name, mode="wb") as blob_file:
+    local_file = blob_client.blob_name.split('/')[-1]
+    with open(file=local_file, mode="wb") as blob_file:
         download_stream = blob_client.download_blob()
         blob_file.write(download_stream.readall())
 
