@@ -11,6 +11,10 @@ on:
         description: 'Name of billing project'
         required: true
         type: string
+      e2e-test-version-ref:
+        description: 'Name of branch or commit hash in this repo to use'
+        required: true
+        type: string
 
 jobs:
   run-e2e-test-job:
@@ -19,7 +23,7 @@ jobs:
       - name: "Checkout dsp-reusable-workflows"
         uses: actions/checkout@v3
         with:
-          ref: main
+          ref: ${{ inputs.e2e-test-version-ref }}
           repository: broadinstitute/dsp-reusable-workflows
           path: dsp-reusable-workflows/
       - name: Set up python
