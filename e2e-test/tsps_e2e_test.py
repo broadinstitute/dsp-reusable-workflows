@@ -108,7 +108,7 @@ def poll_for_imputation_job(tsps_url, job_id, token):
 
     raise Exception(f"tsps pipeline did not complete in 25 minutes")
 
-# download a file with azcopy
+# download a file from a sas url using the azure storage library
 def download_with_azcopy(sas_url):
     blob_client = BlobClient.from_blob_url(sas_url)
     local_file = blob_client.blob_name.split('/')[-1] # get the file name without directories
