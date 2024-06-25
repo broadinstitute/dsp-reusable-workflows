@@ -44,8 +44,8 @@ def run_imputation_pipeline(tsps_url, token):
         },
         "pipelineVersion": "string",
         "pipelineInputs": {
-            "multi_sample_vcf": "this/is/a/fake/file.vcf.gz",
-            "output_basename": "fake_basename"
+            "multiSampleVcf": "this/is/a/fake/file.vcf.gz",
+            "outputBasename": "fake_basename"
         }
     }
 
