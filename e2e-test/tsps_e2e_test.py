@@ -68,7 +68,7 @@ def start_imputation_pipeline(jobId, tsps_url, token):
     request_body = {
         "description": "string",
         "jobControl": {
-            "id": f'{uuid.uuid4()}'
+            "id": f'{jobId}'
         }
     }
 
