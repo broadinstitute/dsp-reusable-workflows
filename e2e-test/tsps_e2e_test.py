@@ -61,7 +61,7 @@ def prepare_imputation_pipeline(tsps_url, token):
     logging.info(f"Successfully prepared imputation pipeline run")
     response = json.loads(response.text)
 
-    return response['id'], response['pipelineFileInputs']
+    return response['jobId'], response['pipelineFileInputs']
 
 # run imputation beagle pipeline
 def start_imputation_pipeline(jobId, tsps_url, token):
