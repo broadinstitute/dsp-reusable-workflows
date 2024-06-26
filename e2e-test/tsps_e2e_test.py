@@ -11,6 +11,7 @@ import json
 import uuid
 import time
 import logging
+import tempfile
 
 
 # update workspace id for imputation beagle pipeline
@@ -61,7 +62,7 @@ def prepare_imputation_pipeline(tsps_url, token):
     logging.info(f"Successfully prepared imputation pipeline run")
     response = json.loads(response.text)
 
-    return response['jobId'], response['pipelineFileInputs']
+    return response['jobId'], response['fileInputUploadUrls']
 
 # run imputation beagle pipeline
 def start_imputation_pipeline(jobId, tsps_url, token):
@@ -135,24 +136,34 @@ def poll_for_imputation_job(tsps_url, job_id, token):
 # write a hello world text file to a sas url using the azure storage library
 def upload_file_with_azcopy(sas_url):
     blob_client = BlobClient.from_blob_url(sas_url)
-    local_file = "temp.txt"
 
-    # write the file locally
-    with open(file=local_file, mode="w") as blob_file:
-        blob_file.write("Hello, World!")
-    
-    # upload the file
-    with open(file=local_file, mode="rb") as blob_file:
-        blob_client.upload_blob(blob_file)
+    # use a temporary directory that will get cleaned up after this block
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        local_file_path = os.path.join(tmpdirname, "temp_file")
+
+        # write the file locally
+        with open(file=local_file_path, mode="w") as blob_file:
+            blob_file.write("Hello, World!")
+        
+        # upload the file
+        with open(file=local_file_path, mode="rb") as blob_file:
+            blob_client.upload_blob(blob_file)
 
 
 # download a file from a sas url using the azure storage library
 def download_with_azcopy(sas_url):
     blob_client = BlobClient.from_blob_url(sas_url)
-    local_file = blob_client.blob_name.split('/')[-1] # get the file name without directories
-    with open(file=local_file, mode="wb") as blob_file:
-        download_stream = blob_client.download_blob()
-        blob_file.write(download_stream.readall())
+
+    # use a temporary directory that will get cleaned up after this block
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        local_file_name = blob_client.blob_name.split('/')[-1] # get the file name without directories
+        local_file_path = os.path.join(tmpdirname, local_file_name)
+        
+        # download the file
+        with open(file=local_file_path, mode="wb") as blob_file:
+            download_stream = blob_client.download_blob()
+            blob_file.write(download_stream.readall())
+
 
 # Setup configuration
 # The environment variables are injected as part of the e2e test setup which does not pass in any args
@@ -265,12 +276,15 @@ try:
     for key, value in pipeline_file_inputs.items():
         logging.info(f"attempting to upload a file to {key} input")
         write_sas_url = value['sasUrl']
+        logging.info(f"sasUrl: {write_sas_url}, type: {type(write_sas_url)} ")
         upload_file_with_azcopy(value)
         logging.info("successfully uploaded file")
 
     # start pipeline run
     logging.info("starting imputation pipeline run")
-    job_id = start_imputation_pipeline(job_id, tsps_url, azure_user_token)
+    job_id_from_start_run = start_imputation_pipeline(job_id, tsps_url, azure_user_token)
+
+    assert(job_id == job_id_from_start_run)
 
     # poll for imputation pipeline
     logging.info("polling for imputation pipeline")
