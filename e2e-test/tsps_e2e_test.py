@@ -135,9 +135,6 @@ def poll_for_imputation_job(tsps_url, job_id, token):
 
 # write a hello world text file to a sas url using the azure storage library
 def upload_file_with_azcopy(sas_url):
-    logging.info("preparing to create BlobClient")
-    logging.info(f"sas_url type is {type(sas_url)}")
-    logging.info(f"sas_url.lower().startswith('http') is {sas_url.lower().startswith('http')}")
     blob_client = BlobClient.from_blob_url(sas_url)
 
     # use a temporary directory that will get cleaned up after this block
@@ -279,9 +276,7 @@ try:
     # make sure we got a writable sas url
     for key, value in pipeline_file_inputs.items():
         logging.info(f"attempting to upload a file to {key} input")
-        write_sas_url = value['sasUrl']
-        logging.info(f"sasUrl: {write_sas_url}, type: {type(write_sas_url)} ")
-        upload_file_with_azcopy(value)
+        upload_file_with_azcopy(value['sasUrl'])
         logging.info("successfully uploaded file")
 
     # start pipeline run
