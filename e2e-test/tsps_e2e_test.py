@@ -135,6 +135,9 @@ def poll_for_imputation_job(tsps_url, job_id, token):
 
 # write a hello world text file to a sas url using the azure storage library
 def upload_file_with_azcopy(sas_url):
+    logging.info("preparing to create BlobClient")
+    logging.info(f"sas_url type is {type(sas_url)}")
+    logging.info(f"sas_url.lower().startswith('http') is {sas_url.lower().startswith('http')}")
     blob_client = BlobClient.from_blob_url(sas_url)
 
     # use a temporary directory that will get cleaned up after this block
@@ -147,6 +150,7 @@ def upload_file_with_azcopy(sas_url):
         
         # upload the file
         with open(file=local_file_path, mode="rb") as blob_file:
+            logging.info("preparing to upload blob")
             blob_client.upload_blob(blob_file)
 
 
