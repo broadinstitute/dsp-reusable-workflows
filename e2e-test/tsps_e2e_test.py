@@ -11,6 +11,7 @@ import json
 import uuid
 import time
 import logging
+import tempfile
 
 
 # update workspace id for imputation beagle pipeline
@@ -35,13 +36,9 @@ def update_imputation_pipeline_workspace_id(tsps_url, workspace_id, token):
     logging.info(f"successfully updated imputation pipeline workspace id: {workspace_id}")
 
 
-# run imputation beagle pipeline
-def run_imputation_pipeline(tsps_url, token):
+def prepare_imputation_pipeline(tsps_url, token):
     request_body = {
-        "description": "string",
-        "jobControl": {
-            "id": f'{uuid.uuid4()}'
-        },
+        "jobId": f'{uuid.uuid4()}',
         "pipelineVersion": "string",
         "pipelineInputs": {
             "multiSampleVcf": "this/is/a/fake/file.vcf.gz",
@@ -49,7 +46,34 @@ def run_imputation_pipeline(tsps_url, token):
         }
     }
 
-    uri = f"{tsps_url}/api/pipelineruns/v1/imputation_beagle"
+    uri = f"{tsps_url}/api/pipelineruns/v1/imputation_beagle/prepare"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "accept": "application/json",
+        "Content-Type": "application/json"
+    }
+
+    response = requests.post(uri, json=request_body, headers=headers)
+    status_code = response.status_code
+
+    if status_code != 200:
+        raise Exception(response.text)
+
+    logging.info(f"Successfully prepared imputation pipeline run")
+    response = json.loads(response.text)
+
+    return response['jobId'], response['fileInputUploadUrls']
+
+# run imputation beagle pipeline
+def start_imputation_pipeline(jobId, tsps_url, token):
+    request_body = {
+        "description": "string",
+        "jobControl": {
+            "id": f'{jobId}'
+        }
+    }
+
+    uri = f"{tsps_url}/api/pipelineruns/v1/imputation_beagle/start"
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json",
@@ -62,7 +86,7 @@ def run_imputation_pipeline(tsps_url, token):
     if status_code != 202:
         raise Exception(response.text)
 
-    logging.info(f"Successfully launched imputation pipeline")
+    logging.info(f"Successfully started imputation pipeline run")
     response = json.loads(response.text)
 
     return response['jobReport']['id']
@@ -108,13 +132,39 @@ def poll_for_imputation_job(tsps_url, job_id, token):
 
     raise Exception(f"tsps pipeline did not complete in 25 minutes")
 
+
+# write a hello world text file to a sas url using the azure storage library
+def upload_file_with_azcopy(sas_url):
+    blob_client = BlobClient.from_blob_url(sas_url)
+
+    # use a temporary directory that will get cleaned up after this block
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        local_file_path = os.path.join(tmpdirname, "temp_file")
+
+        # write the file locally
+        with open(file=local_file_path, mode="w") as blob_file:
+            blob_file.write("Hello, World!")
+        
+        # upload the file
+        with open(file=local_file_path, mode="rb") as blob_file:
+            logging.info("preparing to upload blob")
+            blob_client.upload_blob(blob_file)
+
+
 # download a file from a sas url using the azure storage library
 def download_with_azcopy(sas_url):
     blob_client = BlobClient.from_blob_url(sas_url)
-    local_file = blob_client.blob_name.split('/')[-1] # get the file name without directories
-    with open(file=local_file, mode="wb") as blob_file:
-        download_stream = blob_client.download_blob()
-        blob_file.write(download_stream.readall())
+
+    # use a temporary directory that will get cleaned up after this block
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        local_file_name = blob_client.blob_name.split('/')[-1] # get the file name without directories
+        local_file_path = os.path.join(tmpdirname, local_file_name)
+        
+        # download the file
+        with open(file=local_file_path, mode="wb") as blob_file:
+            download_stream = blob_client.download_blob()
+            blob_file.write(download_stream.readall())
+
 
 # Setup configuration
 # The environment variables are injected as part of the e2e test setup which does not pass in any args
@@ -219,9 +269,21 @@ try:
                                     "https://github.com/DataBiosphere/terra-scientific-pipelines-service/blob/main/pipelines/testing/ImputationBeagleEmpty.wdl",
                                           azure_user_token)
 
-    # launch tsps imputation pipeline
-    logging.info("running imputation pipeline")
-    job_id = run_imputation_pipeline(tsps_url, azure_user_token)
+    # prepare tsps imputation pipeline run
+    logging.info("preparing imputation pipeline run")
+    job_id, pipeline_file_inputs = prepare_imputation_pipeline(tsps_url, azure_user_token)
+
+    # make sure we got a writable sas url
+    for key, value in pipeline_file_inputs.items():
+        logging.info(f"attempting to upload a file to {key} input")
+        upload_file_with_azcopy(value['sasUrl'])
+        logging.info("successfully uploaded file")
+
+    # start pipeline run
+    logging.info("starting imputation pipeline run")
+    job_id_from_start_run = start_imputation_pipeline(job_id, tsps_url, azure_user_token)
+
+    assert(job_id == job_id_from_start_run)
 
     # poll for imputation pipeline
     logging.info("polling for imputation pipeline")
@@ -231,7 +293,9 @@ try:
     for key, value in pipeline_output.items():
         logging.info(f"attempting to retrieve {key} output")
         download_with_azcopy(value)
+        logging.info("successfully downloaded file")
 
+    logging.info("TEST COMPLETE")
 
 except Exception as e:
     logging.error(f"Exception(s) occurred during test. Details: {e}")

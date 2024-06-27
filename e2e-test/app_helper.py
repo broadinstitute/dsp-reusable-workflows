@@ -36,6 +36,8 @@ def poll_for_app_url(workspaceId, app_type, proxy_url_name, azure_token, leo_url
 
     # prevent infinite loop
     polling_attempts_remaining = 30 # 30s x 30 = 15 min
+    sleep_time_seconds = 30
+    timeout_limit_minutes = polling_attempts_remaining * sleep_time_seconds / 60
     
     for i in range(0,shared_variables.RETRIES):
         try:
@@ -52,8 +54,8 @@ def poll_for_app_url(workspaceId, app_type, proxy_url_name, azure_token, leo_url
                 for entries in response:
                     if entries['appType'] == app_type:
                         if entries['status'] == "PROVISIONING":
-                            logging.info(f"{app_type} is still provisioning. Sleeping for 30 seconds")
-                            time.sleep(30)
+                            logging.info(f"{app_type} is still provisioning. Sleeping for {sleep_time_seconds} seconds")
+                            time.sleep(sleep_time_seconds)
                         elif entries['status'] == 'ERROR':
                             logging.error(f"{app_type} is in ERROR state. Error details: {entries['errors']}")
                             return ""
@@ -71,7 +73,7 @@ def poll_for_app_url(workspaceId, app_type, proxy_url_name, azure_token, leo_url
             continue
         else:
             # this will execute if no exception was thrown but none of the return statements were executed
-            logging.error(f"App still provisioning or missing after 10 minutes")
+            logging.error(f"App still provisioning or missing after {timeout_limit_minutes} minutes")
             break
     else:
         raise Exception(f"Error polling for app url: retries maxed out.")
