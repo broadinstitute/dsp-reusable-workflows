@@ -75,7 +75,6 @@ jobs:
             -e PACT_BROKER_PASSWORD=${{ secrets.PACT_BROKER_PASSWORD }} \
             pactfoundation/pact-cli:latest \
             pact-broker list-environments \
-              --output json \
             )
           echo ${RAW_NAMES}
           NAMES=$("${RAW_NAMES}" | jq -rc '.. | .environments? | select(.) | [ .[].name ] | del(.[] | select((. == "alpha") or (. == "test") or (. == "prod")))')
