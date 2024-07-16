@@ -48,6 +48,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Output Inputs
+        run: echo "${{ toJSON(github.event.inputs) }}"
+
       - name: Validate inputs
         if: ${{ !contains(fromJSON('[ "dev", "production", "staging", ""]'), inputs.environment) }}
         run: |
@@ -71,6 +74,7 @@ jobs:
             pact-broker list-environments \
               --output json \
             | jq -rc '.. | .environments? | select(.) | [ .[].name ] | del(.[] | select((. == "alpha") or (. == "test") or (. == "prod")))')
+          echo "names=${NAMES}"
           echo "names=${NAMES}" >> $GITHUB_OUTPUT
   
       - name: Output environments
