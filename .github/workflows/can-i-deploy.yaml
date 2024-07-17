@@ -69,16 +69,14 @@ jobs:
         id: list-environments
         shell: bash
         run: |
-          RAW_RESPONSE=$(docker run --rm \
+          NAMES=$(docker run --rm \
             -e PACT_BROKER_BASE_URL=${{ env.PACT_BROKER_BASE_URL }} \
             -e PACT_BROKER_USERNAME=${{ secrets.PACT_BROKER_USERNAME }} \
             -e PACT_BROKER_PASSWORD=${{ secrets.PACT_BROKER_PASSWORD }} \
             pactfoundation/pact-cli:latest \
             pact-broker list-environments \
-            --output json \
-            )
-          echo ${RAW_RESPONSE}
-          NAMES=$("${RAW_RESPONSE}" | jq -rc '.. | .environments? | select(.) | [ .[].name ] | del(.[] | select((. == "alpha") or (. == "test") or (. == "prod")))')
+              --output json \
+            | jq -rc '.. | .environments? | select(.) | [ .[].name ] | del(.[] | select((. == "alpha") or (. == "test") or (. == "prod")))')
           echo "names=${NAMES}"
           echo "names=${NAMES}" >> $GITHUB_OUTPUT
   
