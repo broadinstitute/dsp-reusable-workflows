@@ -110,7 +110,7 @@ jobs:
             pact-broker can-i-deploy \
               --pacticipant "${{ inputs.PACTICIPANT }}" \
               --version "${{ inputs.VERSION }}" \
-              --to-environment ${{ inputs.ENVIRONMENT }} \
+              --to-environment ${{ matrix.environment }} \
               --retry-while-unknown 10 \
               --retry-interval 30
         shell: bash
