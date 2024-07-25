@@ -1,0 +1,116 @@
+# Github Action for can-i-deploy.
+#
+# This workflow delegates the operation to run-can-i-deploy action
+#
+# For details, refer to https://docs.pact.io/pact_broker/can_i_deploy.
+#
+# Synopsis:
+#  The Pact Broker needs to know which versions of each application are in each environment so it can return the correct pacts for verification and determine whether a pacticular application version is safe to deploy.
+#
+#  To notify the Broker that an application version has been deployed or released, the pact-broker record-deployment and pact-broker record-release commands are provided by the Pact Broker CLI.
+#
+#   record-deployment is used to model the real life scenario where a deployment causes the previous version of an application to be replaced by a new version.
+#   It is used for APIs and consumer applications that are deployed to known instances. When called, it automatically marks the previously deployed version as undeployed.
+#
+# Requirements:
+#  secrets.PACT_BROKER_USERNAME
+#  secrets.PACT_BROKER_PASSWORD
+# must be set in github-action-secrets.
+name: can-i-deploy
+on:
+  workflow_call:
+    inputs:
+      pacticipant:
+        description: 'The name of the pacticipant that was deployed.'
+        required: true
+        type: string
+      version:
+        description: 'The pacticipant version number that was deployed. This must be a pre-agreed upon unique id to identify the pact version.'
+        required: true
+        type: string
+      additional-args:
+        description: JSON of additional options
+        type: string
+        default: "{'logging':'true'}"
+        required: false
+      environment:
+        description: 'The name of the environment that the pacticipant version was deployed to. Acceptable values: "", dev, production, staging.'
+        required: false
+        type: string
+        default: ''
+
+env:
+  PACT_BROKER_BASE_URL: 'https://pact-broker.dsp-eng-tools.broadinstitute.org'
+jobs:
+  validate-inputs-job:
+    runs-on: ubuntu-latest
+    outputs:
+      environments: ${{ steps.deploy-to-environments.outputs.names }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Output Inputs
+        run: | 
+          echo "${{ toJSON(inputs) }}"
+
+      - name: Validate inputs
+        if: ${{ !contains(fromJSON('[ "dev", "production", "staging", ""]'), inputs.environment) }}
+        run: |
+          echo "Acceptable values for 'environment': "" | dev | production | staging"
+          exit 1
+
+      - name: Print a message if no environment has been specified
+        if: ${{ inputs.environment == '' }}
+        run: |
+          echo "No environment has been specified. The can-i-deploy job will be run for all deployed environments."
+
+      - name: List environments
+        id: list-environments
+        shell: bash
+        run: |
+          NAMES=$(docker run --rm \
+            -e PACT_BROKER_BASE_URL=${{ env.PACT_BROKER_BASE_URL }} \
+            -e PACT_BROKER_USERNAME=${{ secrets.PACT_BROKER_USERNAME }} \
+            -e PACT_BROKER_PASSWORD=${{ secrets.PACT_BROKER_PASSWORD }} \
+            pactfoundation/pact-cli:latest \
+            pact-broker list-environments \
+              --output json \
+            | jq -rc '.. | .environments? | select(.) | [ .[].name ] | del(.[] | select((. == "alpha") or (. == "test") or (. == "prod")))')
+          echo "names=${NAMES}"
+          echo "names=${NAMES}" >> $GITHUB_OUTPUT
+  
+      - name: Output environments
+        id: deploy-to-environments
+        run: |
+          if [[ -z "${{ inputs.environment }}" ]]; then
+            NAME='${{ steps.list-environments.outputs.names }}'
+          else
+            NAME='["${{ inputs.environment }}"]'
+          fi
+          echo "names=$NAME" >> $GITHUB_OUTPUT
+
+  can-i-deploy-job:
+    runs-on: ubuntu-latest
+    needs: [ validate-inputs-job ]
+    strategy:
+      matrix:
+        environment: ${{ fromJSON(needs.validate-inputs-job.outputs.environments) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: run-can-i-deploy
+        name: Run can-i-deploy
+        run: |
+          docker run --rm \
+            -e PACT_BROKER_BASE_URL=${{ env.PACT_BROKER_BASE_URL }} \
+            -e PACT_BROKER_USERNAME=${{ secrets.PACT_BROKER_USERNAME }} \
+            -e PACT_BROKER_PASSWORD=${{ secrets.PACT_BROKER_PASSWORD }} \
+            pactfoundation/pact-cli:latest \
+            pact-broker can-i-deploy \
+              --pacticipant "${{ inputs.PACTICIPANT }}" \
+              --version "${{ inputs.VERSION }}" \
+              --to-environment ${{ matrix.environment }} \
+              --retry-while-unknown 10 \
+              --retry-interval 30
+        shell: bash
