@@ -38,6 +38,13 @@ on:
         required: false
         type: string
         default: ''
+    secrets:
+      PACT_BROKER_USERNAME:
+        description: 'The username to log into pact-broker'
+        required: true
+      PACT_BROKER_PASSWORD:
+        description: 'The password to log into pact-broker'
+        required: true
 
 env:
   PACT_BROKER_BASE_URL: 'https://pact-broker.dsp-eng-tools.broadinstitute.org'
