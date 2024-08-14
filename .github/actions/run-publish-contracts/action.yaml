@@ -1,0 +1,112 @@
+name: run-publish-contracts
+description: 'Publish contracts through Pact Broker API endpoint /publish/contracts. Require v2.86.0 or above.'
+inputs:
+  PB_URL:
+    description: 'Base URL of Pact Broker'
+    required: false
+    default: 'https://pact-broker.dsp-eng-tools.broadinstitute.org'
+  REPO_OWNER:
+    description: 'The git repo owner'
+    required: true
+  REPO_NAME:
+    description: 'The git repo name'
+    required: true
+  REPO_BRANCH:
+    description: 'The git branch name'
+    required: true
+  PACT_B64:
+    description: 'Pact content formatted as non-breaking base64 string'
+    required: true
+  BROADBOT_TOKEN:
+    description: 'Broadbot Token'
+    required: true
+  PACT_BROKER_USERNAME:
+    description: 'Pact Broker Username'
+    required: true
+  PACT_BROKER_PASSWORD:
+    description: 'Pact Broker Password'
+    required: true
+  RELEASE_TAG:
+    description: 'The application release tag is used by Pact Broker to keep track of the consumer version. If this tag is unspecified (deprecated), the latest commit of the branch will be used for publishing the consumer pact.'
+    required: false
+runs:
+  using: "composite"
+  steps:
+      - name: Assemble the JSON Request to PB API endpoint /contracts/publish
+        run: |
+          eval "$(printf '%s' ${{ inputs.PACT_B64 }} \
+            | base64 --decode \
+            | jq -r \
+              '@sh "CONSUMER=\(.consumer.name)",
+               @sh "PROVIDER=\(.provider.name)"')"
+
+          echo
+          echo "==== Detect following consumer / provider from contract ===="
+          echo "CONSUMER=${CONSUMER}"
+          echo "PROVIDER=${PROVIDER}"
+
+          if [[ -n "${{ inputs.RELEASE_TAG }}" ]]; then
+            PACTICIPANT_VERSION="${{ inputs.RELEASE_TAG }}"
+          else
+            # Pulling the last git commit
+            PACTICIPANT_VERSION=$(curl -s \
+                  -H "Authorization: token ${{ inputs.BROADBOT_TOKEN }}" \
+                  -H "Accept: application/vnd.github.VERSION.sha" \
+                  "https://api.github.com/repos/${{ inputs.REPO_OWNER }}/${{ inputs.REPO_NAME }}/commits/${{ inputs.REPO_BRANCH }}")
+          fi
+
+          echo
+          echo "==== Latest commit hash from consumer repo, chosen to be the pacticipant version number.  ===="
+          echo "REPO=${{ inputs.REPO_OWNER }}/${{ inputs.REPO_NAME }}"
+          echo "PACTICIPANT_VERSION=${PACTICIPANT_VERSION}"
+
+          cat << EOF > request.json
+          {
+            "pacticipantName": "${CONSUMER}",
+            "pacticipantVersionNumber": "${PACTICIPANT_VERSION}",
+            "branch": "${{ inputs.REPO_BRANCH }}",
+            "tags": ["${{ inputs.REPO_BRANCH }}"],
+            "buildUrl": "",
+            "contracts": [
+              {
+                "consumerName": "${CONSUMER}",
+                "providerName": "${PROVIDER}",
+                "specification": "pact",
+                "contentType": "application/json",
+                "content": "${{ inputs.PACT_B64 }}"
+              }
+            ]
+          }
+          EOF
+        shell: bash
+
+      - id: run-publish-contracts
+        name: Publish contracts and handle errors
+        run: |
+          curl -s \
+               -o response.json \
+               -u "${{ inputs.PACT_BROKER_USERNAME }}:${{ inputs.PACT_BROKER_PASSWORD }}" \
+               -X POST \
+               -H "Content-Type: application/json" \
+               -d @request.json \
+               ${{ inputs.PB_URL }}/contracts/publish
+
+          if ! [[ -f "response.json" ]]; then
+            echo "The Pact Broker failed to produce a response. Please try republishing again."
+            exit 1
+          fi
+
+          echo
+          echo "==== Pact Broker Response ===="
+          cat response.json | jq
+
+          HAS_ERROR=$(cat response.json | jq 'has("errors")')
+
+          if [ "$HAS_ERROR" = true ]
+          then
+            exit 1
+          else
+            exit 0
+          fi
+        shell: bash
+
