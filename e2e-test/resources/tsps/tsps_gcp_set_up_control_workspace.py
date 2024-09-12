@@ -112,12 +112,7 @@ if tsps_sa_email:
                     tsps_sa_email, user_token)
 
 
-# empty wdl:
-# wdl_url = "https://github.com/DataBiosphere/terra-scientific-pipelines-service/blob/main/pipelines/testing/ImputationBeagleEmpty.wdl"
-# working wdl:
-wdl_url = "https://github.com/broadinstitute/warp/blob/TSPS-183_mma_beagle_imputation_hg38/pipelines/broad/arrays/imputation_beagle/ImputationBeaglePreChunk.wdl"
 
-logging.info(f"Adding {wdl_url} to workspace")
 
 # import imputation method
 wdl_namespace = billing_project_name
@@ -158,5 +153,7 @@ outputs_dict = {
     f"{wdl_name}.imputed_multi_sample_vcf": "this.imputed_multi_sample_vcf",
     f"{wdl_name}.imputed_multi_sample_vcf_index": "this.imputed_multi_sample_vcf_index"
   }
+
+logging.info(f"Adding {wdl_name} ({method_definition_dict['methodPath']}) to workspace")
 
 add_wdl_to_gcp_workspace(billing_project_name, workspace_name, wdl_namespace, wdl_name, method_definition_dict, root_entity_type, inputs_dict, outputs_dict, firecloud_orch_url, user_token)
