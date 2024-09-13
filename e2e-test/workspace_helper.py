@@ -183,7 +183,7 @@ def share_workspace_grant_owner(orch_url, billing_project_name, workspace_name, 
     if status_code != 200:
         raise Exception(response.text)
 
-    logging.info(f"Successfully shared workspace {workspace_name} with {email_to_share}")
+    logging.info(f"Successfully shared workspace {workspace_name} with {email_to_share} as OWNER")
 
 
 # ADD WDL TO GCP WORKSPACE ACTION

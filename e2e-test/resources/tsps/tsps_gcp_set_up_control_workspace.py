@@ -22,18 +22,21 @@ from workspace_helper import create_gcp_workspace, share_workspace_grant_owner, 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run e2e test for TSPS/Imputation service')
-    parser.add_argument('-t', '--user_token', required=False,
+    parser.add_argument('-t', '--user-token', required=False,
         help='token for user to authenticate Terra API calls')
-    parser.add_argument('-m', '--tsps_sa_email', required=False,
+    parser.add_argument('-m', '--tsps-sa-email', required=False,
         help='email of tsps service account to share workspace/billing project with')
-    parser.add_argument('--use_real_wdl', action='store_true',
+    parser.add_argument('--use-real-wdl', action='store_true',
         help='whether to import the real ImputationBeagle wdl or the ImputationBeagleEmpty wdl for testing')
     parser.add_argument('-e', '--env', required=False, default='dev',
         help='environment. e.g. `dev` (default) or bee name `terra-marymorg`')
-    parser.add_argument('-p', '--billing_project', required=False,
+    parser.add_argument('-p', '--billing-project', required=False,
         help='billing project to create workspace in')
-    parser.add_argument('-w', '--workspace_name', required=False,
+    parser.add_argument('-w', '--workspace-name', required=False,
         help='name of workspace to be created, if left blank will be auto-generated')
+    parser.add_argument('-a', '--auth-domain', required=True,
+                        help='auth domain group name (without @firecloud.org suffix) to use with new workspace')
+    parser.add_argument('-s', '--share-with', nargs='*', help='(optional) additional email addresses beyond SA to share workspace with at Owner level')
     parser.add_argument('-b', '--is-bee', action='store_true',
         help='flag that the environment is a bee')
     args = parser.parse_args()
@@ -50,6 +53,9 @@ else:
 billing_project_name = args.billing_project
 workspace_name = args.workspace_name
 tsps_sa_email = args.tsps_sa_email
+emails_to_share_with = args.share_with
+
+auth_domains = [args.auth_domain]
 
 rawls_url = f"https://rawls.{env_string}"
 firecloud_orch_url = f"https://firecloud-orchestration.{env_string}" # this doesn't work for BEEs; BEES it's firecloudorch.{env_string}
@@ -90,7 +96,7 @@ def workspace_exists(billing_project_name, workspace_name, rawls_url, token):
 
 # ---------------------- Start TSPS Imputation Workspace Setup ----------------------
 
-logging.info("Starting TSPS imputation workspace setup...")
+logging.info(f"Starting TSPS imputation workspace setup in {args.env}...")
 
 if workspace_name == "":
     workspace_id = None
@@ -102,17 +108,18 @@ else:
 
 if not(workspace_info):
     # Create workspace
-    logging.info("Creating workspace...")
-    workspace_id, workspace_name = create_gcp_workspace(billing_project_name, user_token, rawls_url, workspace_name)
+    logging.info("Creating secure workspace...")
+    workspace_id, workspace_name = create_gcp_workspace(billing_project_name, user_token, rawls_url, workspace_name, auth_domains=auth_domains, enhanced_bucket_logging=True)
 
 # share created workspace with the tsps service account
 if tsps_sa_email:
     logging.info(f"sharing workspace with {tsps_sa_email}")
     share_workspace_grant_owner(firecloud_orch_url, billing_project_name, workspace_name,
                     tsps_sa_email, user_token)
-
-
-
+if emails_to_share_with:
+    for email_to_share_with in emails_to_share_with:
+        logging.info(f"sharing workspace wtih {email_to_share_with}")
+        share_workspace_grant_owner(firecloud_orch_url, billing_project_name, workspace_name, email_to_share_with, user_token)
 
 # import imputation method
 wdl_namespace = billing_project_name
@@ -139,19 +146,25 @@ else:
 
     }
 
-inputs_dict = {
-    f"{wdl_name}.contigs": "this.contigs",
-    f"{wdl_name}.genetic_maps_path": "this.genetic_maps_path",
-    f"{wdl_name}.multi_sample_vcf": "this.multi_sample_vcf",
-    f"{wdl_name}.output_basename": "this.output_basename",
-    f"{wdl_name}.ref_dict": "this.ref_dict",
-    f"{wdl_name}.reference_panel_path_prefix": "this.reference_panel_path_prefix",
-  }
+input_keys = [
+    "contigs",
+    "genetic_maps_path",
+    "multi_sample_vcf",
+    "output_basename",
+    "ref_dict",
+    "reference_panel_path_prefix"
+]
+output_keys = [
+    "chunks_info",
+    "imputed_multi_sample_vcf",
+    "imputed_multi_sample_vcf_index"
+]
 
+inputs_dict = {
+    f"{wdl_name}.{input_key}": f"this.{input_key}" for input_key in input_keys
+  }
 outputs_dict = {
-    f"{wdl_name}.chunks_info": "this.chunks_info",
-    f"{wdl_name}.imputed_multi_sample_vcf": "this.imputed_multi_sample_vcf",
-    f"{wdl_name}.imputed_multi_sample_vcf_index": "this.imputed_multi_sample_vcf_index"
+    f"{wdl_name}.{output_key}": f"this.{output_key}" for output_key in output_keys
   }
 
 logging.info(f"Adding {wdl_name} ({method_definition_dict['methodPath']}) to workspace")
