@@ -109,7 +109,7 @@ def create_gcp_workspace(billing_project_name, token, rawls_url, workspace_name 
 
             logging.info(f"Successfully created workspace '{workspace_name}' in billing project '{billing_project_name}'.")
 
-            return data, data['name']
+            return data['name']
 
         except Exception as e:
             logging.info(f"ERROR workspace creation for '{workspace_name}' in billing project '{billing_project_name}'. Error: {e}")

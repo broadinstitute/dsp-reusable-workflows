@@ -26,8 +26,8 @@ if __name__ == "__main__":
         help='token for user to authenticate Terra API calls')
     parser.add_argument('-m', '--tsps-sa-email', required=False,
         help='email of tsps service account to share workspace/billing project with')
-    parser.add_argument('--use-real-wdl', action='store_true',
-        help='whether to import the real ImputationBeagle wdl or the ImputationBeagleEmpty wdl for testing')
+    parser.add_argument('--use-empty-wdl', action='store_true',
+        help='whether to import the empty ImputationBeagleEmpty wdl for testing; if not set, defaults to the real ImputationBeagle wdl')
     parser.add_argument('-e', '--env', required=False, default='dev',
         help='environment. e.g. `dev` (default) or bee name `terra-marymorg`')
     parser.add_argument('-p', '--billing-project', required=False,
@@ -74,7 +74,7 @@ logging.basicConfig(
 
 # Check whether workspace exists
 def workspace_exists(billing_project_name, workspace_name, rawls_url, token):
-    # returns workspace_id if workspace exists, or None if not
+    # returns True if workspace exists, or False if not
 
     rawls_workspace_api = f"{rawls_url}/api/workspaces/{billing_project_name}/{workspace_name}"
     
@@ -87,29 +87,26 @@ def workspace_exists(billing_project_name, workspace_name, rawls_url, token):
 
     status_code = response.status_code
 
-    if status_code != 200:
-        return None
+    if status_code == 200:
+        # workspace exists!
+        return True
     
-    response_json = response.json()
-    return response_json['workspace']
+    return False
 
 
-# ---------------------- Start TSPS Imputation Workspace Setup ----------------------
+# ---------------------- Start Teaspoons Imputation Workspace Setup ----------------------
 
-logging.info(f"Starting TSPS imputation workspace setup in {args.env}...")
+logging.info(f"Starting GCP Teaspoons Imputation Service Runner Workspace setup in {args.env}...")
 
-if workspace_name == "":
-    workspace_id = None
-else:
-    # Check if workspace exists already
-    logging.info(f"Checking if workspace {billing_project_name}/{workspace_name} exists...")
-    workspace_info = workspace_exists(billing_project_name, workspace_name, rawls_url, user_token)
-    logging.info(f"Workspace {'already exists' if workspace_info else 'does not yet exist'}")
+# Check if workspace exists already
+logging.info(f"Checking if workspace {billing_project_name}/{workspace_name} exists...")
+this_workspace_exists = workspace_exists(billing_project_name, workspace_name, rawls_url, user_token)
+logging.info(f"Workspace {'already exists' if this_workspace_exists else 'does not yet exist'}")
 
-if not(workspace_info):
+if not(this_workspace_exists):
     # Create workspace
     logging.info("Creating secure workspace...")
-    workspace_id, workspace_name = create_gcp_workspace(billing_project_name, user_token, rawls_url, workspace_name, auth_domains=auth_domains, enhanced_bucket_logging=True)
+    workspace_name = create_gcp_workspace(billing_project_name, user_token, rawls_url, workspace_name, auth_domains=auth_domains, enhanced_bucket_logging=True)
 
 # share created workspace with the tsps service account
 if tsps_sa_email:
@@ -123,27 +120,25 @@ if emails_to_share_with:
 
 # import imputation method
 wdl_namespace = billing_project_name
+wdl_name = "ImputationBeagle"
 root_entity_type = "imputation_beagle"
 
-use_real_wdl = True
-if use_real_wdl:
-    wdl_name = "ImputationBeagle"
-    version_or_branch = "TSPS-183_mma_beagle_imputation_hg38"
-    method_definition_dict = {
-        "methodUri": f"dockstore://github.com%2Fbroadinstitute%2Fwarp%2FImputationBeagle/{version_or_branch}",
-        "sourceRepo": "dockstore",
-        "methodPath": "github.com/broadinstitute/warp/ImputationBeagle",
-        "methodVersion": version_or_branch
-    }
-else:
-    wdl_name = "ImputationBeagleEmpty"
+use_empty_wdl = args.use_empty_wdl
+if use_empty_wdl:
     version_or_branch = "0.0.100"
     method_definition_dict = {
         "methodUri": f"dockstore://github.com%2FDataBiosphere%2Fterra-scientific-pipelines-service%2FImputationBeagleEmpty/{version_or_branch}",
         "sourceRepo": "dockstore",
         "methodPath": "github.com/DataBiosphere/terra-scientific-pipelines-service/ImputationBeagleEmpty",
         "methodVersion": version_or_branch
-
+    }
+else:
+    version_or_branch = "TSPS-183_mma_beagle_imputation_hg38"
+    method_definition_dict = {
+        "methodUri": f"dockstore://github.com%2Fbroadinstitute%2Fwarp%2FImputationBeagle/{version_or_branch}",
+        "sourceRepo": "dockstore",
+        "methodPath": "github.com/broadinstitute/warp/ImputationBeagle",
+        "methodVersion": version_or_branch
     }
 
 input_keys = [
@@ -167,6 +162,6 @@ outputs_dict = {
     f"{wdl_name}.{output_key}": f"this.{output_key}" for output_key in output_keys
   }
 
-logging.info(f"Adding {wdl_name} ({method_definition_dict['methodPath']}) to workspace")
+logging.info(f"Adding \"{wdl_name}\" ({method_definition_dict['methodPath']}) to workspace")
 
 add_wdl_to_gcp_workspace(billing_project_name, workspace_name, wdl_namespace, wdl_name, method_definition_dict, root_entity_type, inputs_dict, outputs_dict, firecloud_orch_url, user_token)
