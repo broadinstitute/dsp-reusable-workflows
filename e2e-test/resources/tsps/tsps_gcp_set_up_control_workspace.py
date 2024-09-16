@@ -125,20 +125,20 @@ root_entity_type = "imputation_beagle"
 
 use_empty_wdl = args.use_empty_wdl
 if use_empty_wdl:
-    version_or_branch = "0.0.100"
+    tag_or_branch = "0.0.100"
     method_definition_dict = {
-        "methodUri": f"dockstore://github.com%2FDataBiosphere%2Fterra-scientific-pipelines-service%2FImputationBeagleEmpty/{version_or_branch}",
+        "methodUri": f"dockstore://github.com%2FDataBiosphere%2Fterra-scientific-pipelines-service%2FImputationBeagleEmpty/{tag_or_branch}",
         "sourceRepo": "dockstore",
         "methodPath": "github.com/DataBiosphere/terra-scientific-pipelines-service/ImputationBeagleEmpty",
-        "methodVersion": version_or_branch
+        "methodVersion": tag_or_branch
     }
 else:
-    version_or_branch = "TSPS-183_mma_beagle_imputation_hg38"
+    tag_or_branch = "TSPS-183_mma_beagle_imputation_hg38"
     method_definition_dict = {
-        "methodUri": f"dockstore://github.com%2Fbroadinstitute%2Fwarp%2FImputationBeagle/{version_or_branch}",
+        "methodUri": f"dockstore://github.com%2Fbroadinstitute%2Fwarp%2FImputationBeagle/{tag_or_branch}",
         "sourceRepo": "dockstore",
         "methodPath": "github.com/broadinstitute/warp/ImputationBeagle",
-        "methodVersion": version_or_branch
+        "methodVersion": tag_or_branch
     }
 
 input_keys = [

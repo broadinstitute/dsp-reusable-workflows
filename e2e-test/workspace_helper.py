@@ -90,19 +90,29 @@ def create_gcp_workspace(billing_project_name, token, rawls_url, workspace_name 
 
             # example json that is returned by request:
             # {
-            #   "attributes": {},
-            #   "authorizationDomain": [],
-            #   "bucketName": "",
-            #   "createdBy": "yulialovesterra@gmail.com",
-            #   "createdDate": "2023-08-03T20:10:59.116Z",
-            #   "googleProject": "",
-            #   "isLocked": False,
-            #   "lastModified": "2023-08-03T20:10:59.116Z",
-            #   "name": "api-workspace-1",
-            #   "namespace": "yuliadub-test2",
-            #   "workspaceId": "ac466322-2325-4f57-895d-fdd6c3f8c7ad",
-            #   "workspaceType": "mc",
-            #   "workspaceVersion": "v2"
+            # "attributes": {},
+            # "authorizationDomain": [
+            #     {
+            #     "membersGroupName": "example-auth-domain-group"
+            #     }
+            # ],
+            # "billingAccount": "billingAccounts/0A0A0A-0A0A0A-0A0A0A",
+            # "bucketName": "fc-secure-aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            # "cloudPlatform": "Gcp",
+            # "completedCloneWorkspaceFileTransfer": "2024-09-13T12:59:15.795Z",
+            # "createdBy": "yulialovesterra@gmail.com",
+            # "createdDate": "2024-09-13T12:59:15.795Z",
+            # "googleProject": "terra-a1a1a1a1",
+            # "googleProjectNumber": "101010101010",
+            # "isLocked": false,
+            # "lastModified": "2024-09-13T12:59:15.795Z",
+            # "name": "workspace-name",
+            # "namespace": "terra-project-name",
+            # "state": "Ready",
+            # "workflowCollectionName": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            # "workspaceId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            # "workspaceType": "rawls",
+            # "workspaceVersion": "v2"
             # }
             workspace_response_json = workspace_response.json()
             data = json.loads(json.dumps(workspace_response_json))
