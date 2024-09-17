@@ -172,10 +172,10 @@ def create_and_populate_terra_group(orch_url, group_name, group_admins, group_me
 
     # now add admins and members
     for email_address in group_admins:
-        add_member_to_terra_group(orch_url, email_address, "admin", token)
+        add_member_to_terra_group(orch_url, group_name, email_address, "admin", token)
 
     for email_address in group_members:
-        add_member_to_terra_group(orch_url, email_address, "member", token)
+        add_member_to_terra_group(orch_url, group_name, email_address, "member", token)
     
     return group_email
 
