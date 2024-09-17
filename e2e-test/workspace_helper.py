@@ -198,7 +198,7 @@ def share_workspace_grant_owner(orch_url, billing_project_name, workspace_name, 
 
 # ADD WDL TO GCP WORKSPACE ACTION
 def add_wdl_to_gcp_workspace(billing_project_name, workspace_name, wdl_namespace, wdl_name, method_definition_dict, root_entity_type, inputs_dict, outputs_dict, orch_url, token):
-    uri = f"{orch_url}//api/workspaces/{billing_project_name}/{workspace_name}/method_configs/{wdl_namespace}/{wdl_name}"
+    uri = f"{orch_url}/api/workspaces/{billing_project_name}/{workspace_name}/method_configs/{wdl_namespace}/{wdl_name}"
     request_body = {
         "namespace": wdl_namespace,
         "name": wdl_name,
