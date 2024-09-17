@@ -107,3 +107,36 @@ def add_user_to_billing_profile(rawls_url, billing_project_name, email_to_share,
         raise Exception(response.text)
 
     logging.info(f"Successfully added {email_to_share} as a User to billing project {billing_project_name}")
+
+def create_gcp_billing_project(rawls_url, billing_project_name, billing_account_name, owner_token):
+    uri = f"{rawls_url}/api/billing/v2"
+    request_body = {
+        "projectName": billing_project_name,
+        "billingAccount": billing_account_name
+    }
+    headers = {
+        "Authorization": f"Bearer {owner_token}",
+        "accept": "application/json",
+        "Content-Type": "application/json"
+    }
+
+    response = requests.post(uri, json=request_body, headers=headers)
+
+    if response.status_code != 201:
+        raise Exception(response.text)
+
+    logging.info(f"Successfully created GCP billing project {billing_project_name}")
+
+def delete_gcp_billing_project(rawls_url, billing_project_name, owner_token):
+    uri = f"{rawls_url}/api/billing/v2/{billing_project_name}"
+    headers = {
+        "Authorization": f"Bearer {owner_token}",
+        "accept": "application/json"
+    }
+
+    response = requests.delete(uri, headers=headers)
+
+    if response.status_code != 204:
+        raise Exception(response.text)
+
+    logging.info(f"Successfully deleted GCP billing project {billing_project_name}")

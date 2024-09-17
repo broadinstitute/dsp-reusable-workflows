@@ -1,4 +1,5 @@
 from workspace_helper import create_gcp_workspace, delete_workspace, share_workspace_grant_owner, add_wdl_to_gcp_workspace
+from helper import create_gcp_billing_project, delete_gcp_billing_project
 
 import requests
 import os
@@ -219,6 +220,7 @@ tsps_sa_email = "tsps-qa@broad-dsde-qa.iam.gserviceaccount.com"
 bee_name = os.environ.get("BEE_NAME")
 env_string = bee_name + ".bee.envs-terra.bio"
 
+billing_account_name = os.environ.get("BILLING_ACCOUNT_NAME")
 billing_project_name = os.environ.get("BILLING_PROJECT_NAME")
 workspace_name = ""
 
@@ -244,7 +246,12 @@ try:
     logging.info("Starting Teaspoons GCP E2E test...")
     logging.info(f"billing project: {billing_project_name}, env_string: {env_string}")
 
+    # Create Terra billing project
+    logging.info("Creating billing project...")
+    create_gcp_billing_project(rawls_url, billing_project_name, billing_account_name, admin_token)
+
     # Create auth domain group and add Teaspoons SA as an admin
+    logging.info("Creating auth domain...")
     auth_domain_name = "teaspoons-imputation-e2e-test"
     group_admins = [tsps_sa_email]
     create_and_populate_terra_group(firecloud_orch_url, auth_domain_name, group_admins, [], admin_token)
@@ -313,10 +320,10 @@ except Exception as e:
     logging.error(f"Exception(s) occurred during test. Details: {e}")
     found_exception = True
 finally:
-    # delete workspace and apps
+    # delete workspace
     logging.info("Starting workspace cleanup as part of e2e test...")
     try:
-        delete_workspace(billing_project_name, workspace_name, rawls_url, billing_user_token)
+        delete_workspace(billing_project_name, workspace_name, rawls_url, admin_token)
         logging.info("Workspace cleanup complete")
     # Catch the exception and continue with the test since we don't want cleanup to affect the test results.
     # We can assume that Janitor will clean up the workspace if the test fails
@@ -324,6 +331,18 @@ finally:
     #       https://broadworkbench.atlassian.net/browse/WOR-1309 is fixed
     except Exception as e:
         logging.warning(f"Error cleaning up workspace, test script will continue. Error details: {e}")
+
+    # delete billing project
+    logging.info("Starting billing project cleanup as part of e2e test...")
+    try:
+        delete_gcp_billing_project(rawls_url, billing_project_name, admin_token)
+        logging.info("Billing project cleanup complete")
+    # Catch the exception and continue with the test since we don't want cleanup to affect the test results.
+    # We can assume that Janitor will clean up the billing project if the test fails
+    # TODO: Instead of catching exception and continuing with test, the script should fail the test once
+    #       https://broadworkbench.atlassian.net/browse/WOR-1309 is fixed
+    except Exception as e:
+        logging.warning(f"Error cleaning up billing project, test script will continue. Error details: {e}")
 
     # Use exit(1) so that GHA will fail if an exception was found during the test
     if found_exception:

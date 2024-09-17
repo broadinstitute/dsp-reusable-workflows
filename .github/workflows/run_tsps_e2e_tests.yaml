@@ -8,11 +8,7 @@ on:
         required: true
         type: string
       billing-project-name:
-        description: 'Name of billing project to use for workspace'
-        required: true
-        type: string
-      e2e-test-version-ref:
-        description: 'Name of branch or commit hash in this repo to use'
+        description: 'Name of billing project to create and use for workspace'
         required: true
         type: string
       wdl-method-version:
@@ -63,6 +59,7 @@ jobs:
         env:
           BEE_NAME: ${{ inputs.bee-name }}
           BILLING_PROJECT_NAME: ${{ inputs.billing-project-name }}
+          BILLING_ACCOUNT_NAME: 'billingAccounts/00708C-45D19D-27AAFA'
           USER_TOKEN: ${{ steps.obtain_user_token.outputs.access_token }}
           ADMIN_TOKEN: ${{ steps.obtain_admin_user_token.outputs.access_token }}
           WDL_METHOD_VERSION: ${{ inputs.wdl-method-version }}
