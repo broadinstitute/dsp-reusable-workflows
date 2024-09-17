@@ -56,7 +56,7 @@ jobs:
           token_format: 'access_token'
           workload_identity_provider: 'projects/1038484894585/locations/global/workloadIdentityPools/github-wi-pool/providers/github-wi-provider'
           service_account: 'firecloud-qa@broad-dsde-qa.iam.gserviceaccount.com'
-          access_token_scopes: 'profile, email, openid, cloud-billing'
+          access_token_scopes: 'openid, https://www.googleapis.com/auth/userinfo.email, https://www.googleapis.com/auth/userinfo.profile, https://www.googleapis.com/auth/cloud-billing'
           access_token_subject: 'dumbledore.admin@quality.firecloud.org'
           export_environment_variables: false
       - name: Run e2e test
