@@ -11,6 +11,10 @@ on:
         description: 'Name of billing project to create and use for workspace'
         required: true
         type: string
+      e2e-test-version-ref:
+        description: 'Name of branch or commit hash in this repo to use'
+        required: true
+        type: string
       wdl-method-version:
         description: 'Version (git tag or branch) of WDL to use'
         required: true
