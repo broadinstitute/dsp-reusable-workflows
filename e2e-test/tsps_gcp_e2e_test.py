@@ -1,5 +1,4 @@
-from workspace_helper import create_workspace, delete_workspace, share_workspace_grant_owner
-from helper import add_user_to_billing_profile
+from workspace_helper import create_gcp_workspace, delete_workspace, share_workspace_grant_owner, add_wdl_to_gcp_workspace
 
 import requests
 import os
@@ -165,12 +164,53 @@ def download_with_signed_url(signed_url):
             download_stream = requests.get(signed_url)
             blob_file.write(download_stream.readall())
 
+## GROUP MANAGEMENT FUNCTIONS
+def create_and_populate_terra_group(orch_url, group_name, group_admins, group_members, token):
+    # first create the group
+    group_email = create_terra_group(orch_url, group_name, token)
+
+    # now add admins and members
+    for email_address in group_admins:
+        add_member_to_terra_group(orch_url, email_address, "admin", token)
+
+    for email_address in group_members:
+        add_member_to_terra_group(orch_url, email_address, "member", token)
+    
+    return group_email
+
+
+def create_terra_group(orch_url, group_name, token):
+    uri = f"{orch_url}/api/groups/{group_name}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "accept": "application/json"
+    }
+    response = requests.post(uri, headers=headers)
+    
+    if response.status_code != 201:
+        raise Exception(response.text)
+    
+    return response.json()['groupEmail']
+
+
+def add_member_to_terra_group(orch_url, group_name, email_address, role, token):
+    formatted_email = email_address.replace("@", "%40")
+    uri = f"{orch_url}/api/groups/{group_name}/{role}/{formatted_email}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "accept": "application/json"
+    }
+    response = requests.put(uri, headers=headers)
+
+    if response.status_code != 204:
+        raise Exception(response.text)
+    
+    logging.info(f"added {email_address} as {role} to Terra group {group_name}")
+
 
 # Setup configuration
 # The environment variables are injected as part of the e2e test setup which does not pass in any args
-billing_user_token = os.environ.get("BILLING_USER_TOKEN") # user who has access to the terra billing project
-tsps_sa_token = os.environ.get("TSPS_SA_TOKEN")
-admin_token = os.environ.get("ADMIN_TOKEN")
+admin_token = os.environ.get("ADMIN_TOKEN") # admin user who has access to the terra billing project
 user_token = os.environ.get("USER_TOKEN") # the user who will kick off the teaspoons job
  
 # e2e test is using the tsps qa service account
@@ -198,52 +238,54 @@ logging.basicConfig(
     datefmt=LOG_DATEFORMAT,
 )
 
-# ---------------------- Start TSPS Azure E2E test ----------------------
+# ---------------------- Start Teaspoons GCP E2E test ----------------------
 found_exception = False
 try:
     logging.info("Starting Teaspoons GCP E2E test...")
     logging.info(f"billing project: {billing_project_name}, env_string: {env_string}")
 
-    # TODO Create auth domain group
-    auth_domain = "some-group@test.firecloud.org"
-    # TODO add admin and Teaspoons SA to auth domain
+    # Create auth domain group and add Teaspoons SA as an admin
+    auth_domain_name = "teaspoons-imputation-e2e-test"
+    group_admins = [tsps_sa_email]
+    create_and_populate_terra_group(firecloud_orch_url, auth_domain_name, group_admins, [], admin_token)
 
     # Create workspace
     logging.info("Creating workspace...")
-    workspace_id, workspace_name = create_workspace(billing_project_name, billing_user_token, rawls_url, workspace_name, "gcp", True, [auth_domain])
-
-    # sleep for 1 minute to allow apps that auto-launch to start provisioning
-    logging.info("Sleeping for 1 minute to allow apps that auto-launch to start provisioning...")
-    time.sleep(60)
-
-    # add teaspoons service account to billing project, this can be removed once
-    # https://broadworkbench.atlassian.net/browse/WOR-1620 is addressed
-    logging.info(f"adding tsps qa service account to billing project {billing_project_name}")
-    add_user_to_billing_profile(rawls_url, billing_project_name, tsps_sa_email, billing_user_token)
+    workspace_id, workspace_name = create_gcp_workspace(
+        billing_project_name, 
+        admin_token, 
+        rawls_url, 
+        workspace_name, 
+        auth_domains=[auth_domain_name], 
+        enhanced_bucket_logging=True)
 
     # share created workspace with the teaspoons service account
     logging.info("sharing workspace with tsps qa service account")
     share_workspace_grant_owner(firecloud_orch_url, billing_project_name, workspace_name,
-                                tsps_sa_email, billing_user_token)
+                                tsps_sa_email, admin_token)
+
+    # create a new imputation method that tsps will run
+    logging.info("creating imputation method")
+    wdl_namespace = billing_project_name
+    wdl_name = "ImputationBeagle"
+    root_entity_type = "imputation_beagle"
+    method_definition_dict = {
+        "methodUri": f"dockstore://github.com%2FDataBiosphere%2Fterra-scientific-pipelines-service%2FImputationBeagleEmpty/{wdl_method_version}",
+        "sourceRepo": "dockstore",
+        "methodPath": "github.com/DataBiosphere/terra-scientific-pipelines-service/ImputationBeagleEmpty",
+        "methodVersion": wdl_method_version
+    }
+    add_wdl_to_gcp_workspace(billing_project_name, workspace_name, wdl_namespace, wdl_name, method_definition_dict, root_entity_type, {}, {}, firecloud_orch_url, user_token)
 
     # use admin endpoint to set imputation workspace info
     logging.info("updating imputation workspace info")
     update_imputation_pipeline_workspace_id(tsps_url, billing_project_name, workspace_name, wdl_method_version, admin_token)
 
-    # create a new imputation method that tsps will run
-    logging.info("creating imputation method")
-    # TODO figure out how to get the workflow into a GCP BEE workspace
-    # method_id = create_cbas_github_method(cbas_url,
-    #                                       workspace_id,
-    #                                 "ImputationBeagle",
-    #                                 "https://github.com/DataBiosphere/terra-scientific-pipelines-service/blob/main/pipelines/testing/ImputationBeagleEmpty.wdl",
-    #                                       azure_user_token)
-
     # prepare tsps imputation pipeline run
     logging.info("preparing imputation pipeline run")
     job_id, pipeline_file_inputs = prepare_imputation_pipeline(tsps_url, user_token)
 
-    # make sure we got a writable sas url
+    # make sure we got a writable signed url
     for key, value in pipeline_file_inputs.items():
         logging.info(f"attempting to upload a file to {key} input")
         upload_file_with_signed_url(value['signedUrl'])
@@ -259,7 +301,7 @@ try:
     logging.info("polling for imputation pipeline")
     pipeline_output = poll_for_imputation_job(tsps_url, job_id, user_token)
 
-    # grab data using azcopy
+    # grab data using signed url
     for key, value in pipeline_output.items():
         logging.info(f"attempting to retrieve {key} output")
         download_with_signed_url(value)
