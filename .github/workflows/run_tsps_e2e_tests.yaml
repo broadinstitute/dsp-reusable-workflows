@@ -39,7 +39,7 @@ jobs:
         run: |
           cd dsp-reusable-workflows/e2e-test/resources/tsps/
           pip install -r requirements.txt
-      - name: Generate OAuth2 2.0 access token for billing project owner
+      - name: Generate OAuth2 2.0 access token for Terra user
         id: 'obtain_user_token'
         uses: google-github-actions/auth@v1
         with:
@@ -49,14 +49,14 @@ jobs:
           access_token_scopes: 'profile, email, openid'
           access_token_subject: 'hermione.owner@quality.firecloud.org'
           export_environment_variables: false
-      - name: Generate OAuth2 2.0 access token for admin user
+      - name: Generate OAuth2 2.0 access token for admin user and billing project owner
         id: 'obtain_admin_user_token'
         uses: google-github-actions/auth@v1
         with:
           token_format: 'access_token'
           workload_identity_provider: 'projects/1038484894585/locations/global/workloadIdentityPools/github-wi-pool/providers/github-wi-provider'
           service_account: 'firecloud-qa@broad-dsde-qa.iam.gserviceaccount.com'
-          access_token_scopes: 'profile, email, openid'
+          access_token_scopes: 'profile, email, openid, cloud-billing'
           access_token_subject: 'dumbledore.admin@quality.firecloud.org'
           export_environment_variables: false
       - name: Run e2e test
