@@ -11,7 +11,7 @@ import tempfile
 
 
 # update workspace id for imputation beagle pipeline
-def update_imputation_pipeline_workspace_id(tsps_url, workspace_project, workspace_name, wdl_method_version, token):
+def update_imputation_pipeline_workspace(tsps_url, workspace_project, workspace_name, wdl_method_version, token):
     request_body = {
         "workspaceProject": workspace_project,
         "workspaceName": workspace_name,
@@ -258,7 +258,7 @@ try:
 
     # Create workspace
     logging.info("Creating workspace...")
-    workspace_id, workspace_name = create_gcp_workspace(
+    workspace_name = create_gcp_workspace(
         billing_project_name, 
         admin_token, 
         rawls_url, 
@@ -286,7 +286,7 @@ try:
 
     # use admin endpoint to set imputation workspace info
     logging.info("updating imputation workspace info")
-    update_imputation_pipeline_workspace_id(tsps_url, billing_project_name, workspace_name, wdl_method_version, admin_token)
+    update_imputation_pipeline_workspace(tsps_url, billing_project_name, workspace_name, wdl_method_version, admin_token)
 
     # prepare tsps imputation pipeline run
     logging.info("preparing imputation pipeline run")
