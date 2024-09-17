@@ -215,6 +215,7 @@ def add_wdl_to_gcp_workspace(billing_project_name, workspace_name, wdl_namespace
         "methodConfigVersion": 1,
         "deleted": False
     }
+    logging.debug(f"uri: {uri} ... request body: {request_body}")
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json",
