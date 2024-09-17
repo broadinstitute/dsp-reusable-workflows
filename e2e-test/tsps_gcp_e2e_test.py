@@ -13,7 +13,7 @@ import tempfile
 # update workspace id for imputation beagle pipeline
 def update_imputation_pipeline_workspace(tsps_url, workspace_project, workspace_name, wdl_method_version, token):
     request_body = {
-        "workspaceProject": workspace_project,
+        "workspaceBillingProject": workspace_project,
         "workspaceName": workspace_name,
         "wdlMethodVersion": wdl_method_version
     }
@@ -271,7 +271,7 @@ try:
     share_workspace_grant_owner(firecloud_orch_url, billing_project_name, workspace_name,
                                 tsps_sa_email, admin_token)
 
-    # create a new imputation method that tsps will run
+    # create a new imputation method that teaspoons will run
     logging.info("creating imputation method")
     wdl_namespace = billing_project_name
     wdl_name = "ImputationBeagle"
