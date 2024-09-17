@@ -21,7 +21,7 @@ from workspace_helper import create_gcp_workspace, share_workspace_grant_owner, 
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Run e2e test for TSPS/Imputation service')
+    parser = argparse.ArgumentParser(description='Set up Control Workspace for Teaspoons Imputation service')
     parser.add_argument('-t', '--user-token', required=False,
         help='token for user to authenticate Terra API calls')
     parser.add_argument('-m', '--tsps-sa-email', required=False,
@@ -30,6 +30,8 @@ if __name__ == "__main__":
         help='whether to import the empty ImputationBeagleEmpty wdl for testing; if not set, defaults to the real ImputationBeagle wdl')
     parser.add_argument('-e', '--env', required=False, default='dev',
         help='environment. e.g. `dev` (default) or bee name `terra-marymorg`')
+    parser.add_argument('-b', '--is-bee', action='store_true',
+        help='flag that the environment is a bee')
     parser.add_argument('-p', '--billing-project', required=False,
         help='billing project to create workspace in')
     parser.add_argument('-w', '--workspace-name', required=False,
@@ -37,15 +39,15 @@ if __name__ == "__main__":
     parser.add_argument('-a', '--auth-domain', required=True,
                         help='auth domain group name (without @firecloud.org suffix) to use with new workspace')
     parser.add_argument('-s', '--share-with', nargs='*', help='(optional) additional email addresses beyond SA to share workspace with at Owner level')
-    parser.add_argument('-b', '--is-bee', action='store_true',
-        help='flag that the environment is a bee')
+
     args = parser.parse_args()
 
 
 # Setup configuration
 user_token = args.user_token
+is_bee = args.is_bee
 
-if args.is_bee:
+if is_bee:
     env_string = f"{args.env}.bee.envs-terra.bio"
 else:
     env_string = f"dsde-{args.env}.broadinstitute.org"
@@ -58,8 +60,11 @@ emails_to_share_with = args.share_with
 auth_domains = [args.auth_domain]
 
 rawls_url = f"https://rawls.{env_string}"
-firecloud_orch_url = f"https://firecloud-orchestration.{env_string}" # this doesn't work for BEEs; BEES it's firecloudorch.{env_string}
 tsps_url = f"https://tsps.{env_string}"
+if is_bee:
+    firecloud_orch_url = f"https://firecloudorch.{env_string}" 
+else:
+    firecloud_orch_url = f"https://firecloud-orchestration.{env_string}"
 
 # configure logging format
 LOG_FORMAT = "%(asctime)s %(levelname)-8s %(message)s"
