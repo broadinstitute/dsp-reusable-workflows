@@ -117,7 +117,7 @@ def poll_for_imputation_job(tsps_url, job_id, token):
             if response['jobReport']['status'] == 'SUCCEEDED':
                 logging.info(f"tsps pipeline has succeeded: {response}")
                 # return the pipeline output dictionary
-                return response['pipelineOutputs']
+                return response['pipelineRunReport']['outputs']
             else:
                 raise Exception(f'tsps pipeline failed: {response}')
         elif status_code == 202:
