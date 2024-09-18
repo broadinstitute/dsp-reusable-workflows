@@ -21,6 +21,7 @@ def create_workspace(billing_project_name, azure_token, rawls_url, workspace_nam
                 "name": workspace_name,
                 "attributes": {}
             }
+            
             header = {
                 "Authorization": "Bearer " + azure_token,
                 "accept": "application/json"
