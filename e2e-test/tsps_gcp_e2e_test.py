@@ -90,7 +90,7 @@ def start_imputation_pipeline(jobId, tsps_url, token):
     return response['jobReport']['id']
 
 
-# poll for imputation beagle job; if successful, return the pipelineOutputs object (dict)
+# poll for imputation beagle job; if successful, return the pipelineRunReport.outputs object (dict)
 def poll_for_imputation_job(tsps_url, job_id, token):
 
     logging.info("sleeping for 5 minutes so pipeline has time to complete")
@@ -160,10 +160,10 @@ def download_with_signed_url(signed_url):
     with tempfile.TemporaryDirectory() as tmpdirname:
         local_file_path = os.path.join(tmpdirname, local_file_name)
         
-        # download the file
+        # download the file and write to local file
         with open(file=local_file_path, mode="wb") as blob_file:
-            download_stream = requests.get(signed_url)
-            blob_file.write(download_stream.readall())
+            download_stream = requests.get(signed_url).content
+            blob_file.write(download_stream)
 
 ## GROUP MANAGEMENT FUNCTIONS
 def create_and_populate_terra_group(orch_url, group_name, group_admins, group_members, token):
