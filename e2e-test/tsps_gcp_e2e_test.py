@@ -8,6 +8,7 @@ import uuid
 import time
 import logging
 import tempfile
+import urllib.parse
 
 
 # update workspace id for imputation beagle pipeline
@@ -195,7 +196,7 @@ def create_terra_group(orch_url, group_name, token):
 
 
 def add_member_to_terra_group(orch_url, group_name, email_address, role, token):
-    formatted_email = email_address.replace("@", "%40")
+    formatted_email = urllib.parse.quote_plus(email_address)
     uri = f"{orch_url}/api/groups/{group_name}/{role}/{formatted_email}"
     headers = {
         "Authorization": f"Bearer {token}",
