@@ -19,7 +19,7 @@ def update_imputation_pipeline_workspace(tsps_url, workspace_project, workspace_
         "wdlMethodVersion": wdl_method_version
     }
 
-    uri = f"{tsps_url}/api/admin/v1/pipeline/imputation_beagle"
+    uri = f"{tsps_url}/api/admin/v1/pipeline/array_imputation"
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json",
@@ -45,7 +45,7 @@ def prepare_imputation_pipeline(tsps_url, token):
         }
     }
 
-    uri = f"{tsps_url}/api/pipelineruns/v1/imputation_beagle/prepare"
+    uri = f"{tsps_url}/api/pipelineruns/v1/array_imputation/prepare"
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json",
@@ -72,7 +72,7 @@ def start_imputation_pipeline(jobId, tsps_url, token):
         }
     }
 
-    uri = f"{tsps_url}/api/pipelineruns/v1/imputation_beagle/start"
+    uri = f"{tsps_url}/api/pipelineruns/v1/array_imputation/start"
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json",
@@ -100,7 +100,7 @@ def poll_for_imputation_job(tsps_url, job_id, token):
 
     # waiting for 25 total minutes, initial 5 minutes then 20 intervals of 1 minute each
     poll_count = 20
-    uri = f"{tsps_url}/api/pipelineruns/v1/imputation_beagle/result/{job_id}"
+    uri = f"{tsps_url}/api/pipelineruns/v1/array_imputation/result/{job_id}"
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json",
@@ -276,7 +276,7 @@ try:
     logging.info("creating imputation method")
     wdl_namespace = billing_project_name
     wdl_name = "ImputationBeagle"
-    root_entity_type = "imputation_beagle"
+    root_entity_type = "array_imputation"
     method_definition_dict = {
         "methodUri": f"dockstore://github.com%2FDataBiosphere%2Fterra-scientific-pipelines-service%2FImputationBeagleEmpty/{wdl_method_version}",
         "sourceRepo": "dockstore",

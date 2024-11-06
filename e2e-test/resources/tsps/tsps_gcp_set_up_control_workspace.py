@@ -126,7 +126,7 @@ if emails_to_share_with:
 # import imputation method
 wdl_namespace = billing_project_name
 wdl_name = "ImputationBeagle"
-root_entity_type = "imputation_beagle"
+root_entity_type = "array_imputation"
 
 use_empty_wdl = args.use_empty_wdl
 if use_empty_wdl:
