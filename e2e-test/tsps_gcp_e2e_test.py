@@ -131,6 +131,25 @@ def poll_for_imputation_job(tsps_url, job_id, token):
 
     raise Exception(f"tsps pipeline did not complete in 25 minutes")
 
+def query_for_user_quota_consumed(tsps_url, token):
+
+    uri = f"{tsps_url}/api/quotas/v1/array_imputation"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "accept": "application/json",
+        "Content-Type": "application/json"
+    }
+
+    response = requests.get(uri, headers=headers)
+    status_code = response.status_code
+
+    if status_code != 200:
+        raise Exception(response.text)
+
+    logging.info(f"Successfully retried user quota")
+    response = json.loads(response.text)
+
+    return response['quotaConsumed']
 
 ## GCS FILE FUNCTIONS
 # write a hello world text file and upload using a signed url
@@ -285,9 +304,23 @@ try:
     }
     add_wdl_to_gcp_workspace(billing_project_name, workspace_name, wdl_namespace, wdl_name, method_definition_dict, root_entity_type, {}, {}, firecloud_orch_url, admin_token)
 
+    # create a new quota consumed method that teaspoons will run
+    logging.info("creating quota consumed method")
+    wdl_name = "QuotaConsumed"
+    method_definition_dict = {
+        "methodUri": f"dockstore://github.com%2FDataBiosphere%2Fterra-scientific-pipelines-service%2FQuotaConsumedEmpty/{wdl_method_version}",
+        "sourceRepo": "dockstore",
+        "methodPath": "github.com/DataBiosphere/terra-scientific-pipelines-service/QuotaConsumedEmpty",
+        "methodVersion": wdl_method_version
+    }
+    add_wdl_to_gcp_workspace(billing_project_name, workspace_name, wdl_namespace, wdl_name, method_definition_dict, root_entity_type, {}, {}, firecloud_orch_url, admin_token)
+
     # use admin endpoint to set imputation workspace info
     logging.info("updating imputation workspace info")
     update_imputation_pipeline_workspace(tsps_url, billing_project_name, workspace_name, wdl_method_version, admin_token)
+
+    # query for user quota consumed before running pipeline, expect the default of 0
+    assert 0 == query_for_user_quota_consumed(tsps_url, user_token)
 
     # prepare tsps imputation pipeline run
     logging.info("preparing imputation pipeline run")
@@ -314,6 +347,10 @@ try:
         logging.info(f"attempting to retrieve {key} output")
         download_with_signed_url(value)
         logging.info("successfully downloaded file")
+
+    # query for user quota consumed after running pipeline, expect an increase of 50
+    # from quota consumed method used for testing
+    assert 50 == query_for_user_quota_consumed(tsps_url, user_token)
 
     logging.info("TEST COMPLETE")
 
