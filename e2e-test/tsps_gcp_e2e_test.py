@@ -19,7 +19,7 @@ def update_imputation_pipeline_workspace(tsps_url, workspace_project, workspace_
         "wdlMethodVersion": wdl_method_version
     }
 
-    uri = f"{tsps_url}/api/admin/v1/pipeline/array_imputation"
+    uri = f"{tsps_url}/api/admin/v1/pipelines/array_imputation"
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json",
