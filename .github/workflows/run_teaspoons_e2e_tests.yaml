@@ -1,4 +1,4 @@
-name: run-tsps-e2e-tests
+name: run-teaspoons-e2e-tests
 
 on:
   workflow_call:
@@ -37,7 +37,7 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: |
-          cd dsp-reusable-workflows/e2e-test/resources/tsps/
+          cd dsp-reusable-workflows/e2e-test/resources/teaspoons/
           pip install -r requirements.txt
       - name: Generate OAuth2 2.0 access token for Terra user
         id: 'obtain_user_token'
@@ -69,4 +69,4 @@ jobs:
           WDL_METHOD_VERSION: ${{ inputs.wdl-method-version }}
         run: |
           cd dsp-reusable-workflows/
-          python e2e-test/tsps_gcp_e2e_test.py
+          python e2e-test/teaspoons_gcp_e2e_test.py
