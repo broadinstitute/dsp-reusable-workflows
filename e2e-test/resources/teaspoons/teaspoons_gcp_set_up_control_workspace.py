@@ -24,8 +24,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Set up Control Workspace for Teaspoons Imputation service')
     parser.add_argument('-t', '--user-token', required=False,
         help='token for user to authenticate Terra API calls')
-    parser.add_argument('-m', '--tsps-sa-email', required=False,
-        help='email of tsps service account to share workspace/billing project with')
+    parser.add_argument('-m', '--teaspoons-sa-email', required=False,
+        help='email of teaspoons service account to share workspace/billing project with')
     parser.add_argument('--use-empty-wdl', action='store_true',
         help='whether to import the empty ImputationBeagleEmpty wdl for testing; if not set, defaults to the real ImputationBeagle wdl')
     parser.add_argument('-e', '--env', required=False, default='dev',
@@ -54,13 +54,13 @@ else:
 
 billing_project_name = args.billing_project
 workspace_name = args.workspace_name
-tsps_sa_email = args.tsps_sa_email
+teaspoons_sa_email = args.teaspoons_sa_email
 emails_to_share_with = args.share_with
 
 auth_domains = [args.auth_domain]
 
 rawls_url = f"https://rawls.{env_string}"
-tsps_url = f"https://tsps.{env_string}"
+teaspoons_url = f"https://teaspoons.{env_string}"
 if is_bee:
     firecloud_orch_url = f"https://firecloudorch.{env_string}" 
 else:
@@ -113,11 +113,11 @@ if not(this_workspace_exists):
     logging.info("Creating secure workspace...")
     workspace_name = create_gcp_workspace(billing_project_name, user_token, rawls_url, workspace_name, auth_domains=auth_domains, enhanced_bucket_logging=True)
 
-# share created workspace with the tsps service account
-if tsps_sa_email:
-    logging.info(f"sharing workspace with {tsps_sa_email}")
+# share created workspace with the teaspoons service account
+if teaspoons_sa_email:
+    logging.info(f"sharing workspace with {teaspoons_sa_email}")
     share_workspace_grant_owner(firecloud_orch_url, billing_project_name, workspace_name,
-                    tsps_sa_email, user_token)
+                                teaspoons_sa_email, user_token)
 if emails_to_share_with:
     for email_to_share_with in emails_to_share_with:
         logging.info(f"sharing workspace wtih {email_to_share_with}")

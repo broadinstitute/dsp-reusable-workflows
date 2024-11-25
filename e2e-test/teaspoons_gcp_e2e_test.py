@@ -12,14 +12,14 @@ import urllib.parse
 
 
 # update workspace id for imputation beagle pipeline
-def update_imputation_pipeline_workspace(tsps_url, workspace_project, workspace_name, wdl_method_version, token):
+def update_imputation_pipeline_workspace(teaspoons_url, workspace_project, workspace_name, wdl_method_version, token):
     request_body = {
         "workspaceBillingProject": workspace_project,
         "workspaceName": workspace_name,
         "wdlMethodVersion": wdl_method_version
     }
 
-    uri = f"{tsps_url}/api/admin/v1/pipelines/array_imputation"
+    uri = f"{teaspoons_url}/api/admin/v1/pipelines/array_imputation"
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json",
@@ -35,7 +35,7 @@ def update_imputation_pipeline_workspace(tsps_url, workspace_project, workspace_
     logging.info(f"successfully updated imputation pipeline workspace and wdl method version to: {workspace_project}, {workspace_name}, {wdl_method_version}")
 
 
-def prepare_imputation_pipeline(tsps_url, token):
+def prepare_imputation_pipeline(teaspoons_url, token):
     request_body = {
         "jobId": f'{uuid.uuid4()}',
         "pipelineVersion": 0,
@@ -45,7 +45,7 @@ def prepare_imputation_pipeline(tsps_url, token):
         }
     }
 
-    uri = f"{tsps_url}/api/pipelineruns/v1/array_imputation/prepare"
+    uri = f"{teaspoons_url}/api/pipelineruns/v1/array_imputation/prepare"
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json",
@@ -64,7 +64,7 @@ def prepare_imputation_pipeline(tsps_url, token):
     return response['jobId'], response['fileInputUploadUrls']
 
 # run imputation beagle pipeline
-def start_imputation_pipeline(jobId, tsps_url, token):
+def start_imputation_pipeline(jobId, teaspoons_url, token):
     request_body = {
         "description": f"e2e test run for jobId {jobId}",
         "jobControl": {
@@ -72,7 +72,7 @@ def start_imputation_pipeline(jobId, tsps_url, token):
         }
     }
 
-    uri = f"{tsps_url}/api/pipelineruns/v1/array_imputation/start"
+    uri = f"{teaspoons_url}/api/pipelineruns/v1/array_imputation/start"
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json",
@@ -92,7 +92,7 @@ def start_imputation_pipeline(jobId, tsps_url, token):
 
 
 # poll for imputation beagle job; if successful, return the pipelineRunReport.outputs object (dict)
-def poll_for_imputation_job(tsps_url, job_id, token):
+def poll_for_imputation_job(teaspoons_url, job_id, token):
 
     logging.info("sleeping for 5 minutes so pipeline has time to complete")
     # start by sleeping for 5 minutes
@@ -100,7 +100,7 @@ def poll_for_imputation_job(tsps_url, job_id, token):
 
     # waiting for 25 total minutes, initial 5 minutes then 20 intervals of 1 minute each
     poll_count = 20
-    uri = f"{tsps_url}/api/pipelineruns/v1/array_imputation/result/{job_id}"
+    uri = f"{teaspoons_url}/api/pipelineruns/v1/array_imputation/result/{job_id}"
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json",
@@ -114,26 +114,26 @@ def poll_for_imputation_job(tsps_url, job_id, token):
         if status_code == 200:
             # job is completed, test for status
             response = json.loads(response.text)
-            logging.info(f'tsps pipeline completed with 200 status')
+            logging.info(f'teaspoons pipeline completed with 200 status')
             if response['jobReport']['status'] == 'SUCCEEDED':
-                logging.info(f"tsps pipeline has succeeded: {response}")
+                logging.info(f"teaspoons pipeline has succeeded: {response}")
                 # return the pipeline output dictionary
                 return response['pipelineRunReport']['outputs']
             else:
-                raise Exception(f'tsps pipeline failed: {response}')
+                raise Exception(f'teaspoons pipeline failed: {response}')
         elif status_code == 202:
-            logging.info("tsps pipeline still running, sleeping for 1 minute")
+            logging.info("teaspoons pipeline still running, sleeping for 1 minute")
             # job is still running, sleep for the next poll
             time.sleep(1 * 60)
         else:
-            raise Exception(f'tsps pipeline failed with a {status_code} status code. has response {response.text}')
+            raise Exception(f'teaspoons pipeline failed with a {status_code} status code. has response {response.text}')
         poll_count -= 1
 
-    raise Exception(f"tsps pipeline did not complete in 25 minutes")
+    raise Exception(f"teaspoons pipeline did not complete in 25 minutes")
 
-def query_for_user_quota_consumed(tsps_url, token):
+def query_for_user_quota_consumed(teaspoons_url, token):
 
-    uri = f"{tsps_url}/api/quotas/v1/array_imputation"
+    uri = f"{teaspoons_url}/api/quotas/v1/array_imputation"
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json",
@@ -234,8 +234,8 @@ def add_member_to_terra_group(orch_url, group_name, email_address, role, token):
 admin_token = os.environ.get("ADMIN_TOKEN") # admin user who has access to the terra billing project
 user_token = os.environ.get("USER_TOKEN") # the user who will kick off the teaspoons job
  
-# e2e test is using the tsps qa service account
-tsps_sa_email = "tsps-qa@broad-dsde-qa.iam.gserviceaccount.com"
+# e2e test is using the teaspoons qa service account
+teaspoons_sa_email = "teaspoons-qa@broad-dsde-qa.iam.gserviceaccount.com"
 
 bee_name = os.environ.get("BEE_NAME")
 env_string = bee_name + ".bee.envs-terra.bio"
@@ -246,7 +246,7 @@ workspace_name = ""
 
 rawls_url = f"https://rawls.{env_string}"
 firecloud_orch_url = f"https://firecloudorch.{env_string}"
-tsps_url = f"https://tsps.{env_string}"
+teaspoons_url = f"https://teaspoons.{env_string}"
 
 wdl_method_version = os.environ.get("WDL_METHOD_VERSION")
 
@@ -273,7 +273,7 @@ try:
     # Create auth domain group and add Teaspoons SA as an admin
     logging.info("Creating auth domain...")
     auth_domain_name = "teaspoons-imputation-e2e-test"
-    group_admins = [tsps_sa_email]
+    group_admins = [teaspoons_sa_email]
     create_and_populate_terra_group(firecloud_orch_url, auth_domain_name, group_admins, [], admin_token)
 
     # Create workspace
@@ -287,9 +287,9 @@ try:
         enhanced_bucket_logging=True)
 
     # share created workspace with the teaspoons service account
-    logging.info("sharing workspace with tsps qa service account")
+    logging.info("sharing workspace with teaspoons qa service account")
     share_workspace_grant_owner(firecloud_orch_url, billing_project_name, workspace_name,
-                                tsps_sa_email, admin_token)
+                                teaspoons_sa_email, admin_token)
 
     # create a new imputation method that teaspoons will run
     logging.info("creating imputation method")
@@ -317,14 +317,14 @@ try:
 
     # use admin endpoint to set imputation workspace info
     logging.info("updating imputation workspace info")
-    update_imputation_pipeline_workspace(tsps_url, billing_project_name, workspace_name, wdl_method_version, admin_token)
+    update_imputation_pipeline_workspace(teaspoons_url, billing_project_name, workspace_name, wdl_method_version, admin_token)
 
     # query for user quota consumed before running pipeline, expect the default of 0
-    assert 0 == query_for_user_quota_consumed(tsps_url, user_token)
+    assert 0 == query_for_user_quota_consumed(teaspoons_url, user_token)
 
-    # prepare tsps imputation pipeline run
+    # prepare teaspoons imputation pipeline run
     logging.info("preparing imputation pipeline run")
-    job_id, pipeline_file_inputs = prepare_imputation_pipeline(tsps_url, user_token)
+    job_id, pipeline_file_inputs = prepare_imputation_pipeline(teaspoons_url, user_token)
 
     # make sure we got a writable signed url
     for key, value in pipeline_file_inputs.items():
@@ -334,13 +334,13 @@ try:
 
     # start pipeline run
     logging.info("starting imputation pipeline run")
-    job_id_from_start_run = start_imputation_pipeline(job_id, tsps_url, user_token)
+    job_id_from_start_run = start_imputation_pipeline(job_id, teaspoons_url, user_token)
 
     assert(job_id == job_id_from_start_run)
 
     # poll for imputation pipeline
     logging.info("polling for imputation pipeline")
-    pipeline_output = poll_for_imputation_job(tsps_url, job_id, user_token)
+    pipeline_output = poll_for_imputation_job(teaspoons_url, job_id, user_token)
 
     # grab data using signed url
     for key, value in pipeline_output.items():
@@ -350,7 +350,7 @@ try:
 
     # query for user quota consumed after running pipeline, expect an increase of 50
     # from quota consumed method used for testing
-    assert 50 == query_for_user_quota_consumed(tsps_url, user_token)
+    assert 50 == query_for_user_quota_consumed(teaspoons_url, user_token)
 
     logging.info("TEST COMPLETE")
 
