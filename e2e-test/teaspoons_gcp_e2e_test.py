@@ -92,7 +92,7 @@ def start_imputation_pipeline(jobId, teaspoons_url, token):
 
 
 # poll for imputation beagle job; if successful, return the pipelineRunReport.outputs object (dict)
-def poll_for_imputation_job(result_url, job_id, token):
+def poll_for_imputation_job(result_url, token):
 
     logging.info("sleeping for 5 minutes so pipeline has time to complete")
     # start by sleeping for 5 minutes
@@ -339,7 +339,7 @@ try:
 
     # poll for imputation pipeline
     logging.info("polling for imputation pipeline")
-    pipeline_output = poll_for_imputation_job(result_url, job_id, user_token)
+    pipeline_output = poll_for_imputation_job(result_url, user_token)
 
     # grab data using signed url
     for key, value in pipeline_output.items():
