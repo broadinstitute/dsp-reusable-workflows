@@ -88,11 +88,11 @@ def start_imputation_pipeline(jobId, teaspoons_url, token):
     logging.info(f"Successfully started imputation pipeline run")
     response = json.loads(response.text)
 
-    return response['jobReport']['id']
+    return response['jobReport']['id'], response['jobReport']['resultURL']
 
 
 # poll for imputation beagle job; if successful, return the pipelineRunReport.outputs object (dict)
-def poll_for_imputation_job(teaspoons_url, job_id, token):
+def poll_for_imputation_job(result_url, job_id, token):
 
     logging.info("sleeping for 5 minutes so pipeline has time to complete")
     # start by sleeping for 5 minutes
@@ -100,7 +100,6 @@ def poll_for_imputation_job(teaspoons_url, job_id, token):
 
     # waiting for 25 total minutes, initial 5 minutes then 20 intervals of 1 minute each
     poll_count = 20
-    uri = f"{teaspoons_url}/api/pipelineruns/v1/array_imputation/result/{job_id}"
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json",
@@ -108,7 +107,7 @@ def poll_for_imputation_job(teaspoons_url, job_id, token):
     }
 
     while poll_count >= 0:
-        response = requests.get(uri, headers=headers)
+        response = requests.get(result_url, headers=headers)
         status_code = response.status_code
 
         if status_code == 200:
@@ -334,13 +333,13 @@ try:
 
     # start pipeline run
     logging.info("starting imputation pipeline run")
-    job_id_from_start_run = start_imputation_pipeline(job_id, teaspoons_url, user_token)
+    job_id_from_start_run, result_url = start_imputation_pipeline(job_id, teaspoons_url, user_token)
 
     assert(job_id == job_id_from_start_run)
 
     # poll for imputation pipeline
     logging.info("polling for imputation pipeline")
-    pipeline_output = poll_for_imputation_job(teaspoons_url, job_id, user_token)
+    pipeline_output = poll_for_imputation_job(result_url, job_id, user_token)
 
     # grab data using signed url
     for key, value in pipeline_output.items():
