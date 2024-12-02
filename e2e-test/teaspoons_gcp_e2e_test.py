@@ -19,7 +19,7 @@ def update_imputation_pipeline_workspace(teaspoons_url, workspace_project, works
         "wdlMethodVersion": wdl_method_version
     }
 
-    uri = f"{teaspoons_url}/api/admin/v1/pipelines/array_imputation"
+    uri = f"{teaspoons_url}/api/admin/v1/pipelines/array_imputation/0"
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json",
@@ -72,7 +72,7 @@ def start_imputation_pipeline(jobId, teaspoons_url, token):
         }
     }
 
-    uri = f"{teaspoons_url}/api/pipelineruns/v1/array_imputation/start"
+    uri = f"{teaspoons_url}/api/pipelineruns/v1/start"
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json",
