@@ -38,6 +38,7 @@ def update_imputation_pipeline_workspace(teaspoons_url, workspace_project, works
 def prepare_imputation_pipeline(teaspoons_url, token):
     request_body = {
         "jobId": f'{uuid.uuid4()}',
+        "pipelineName": "array_imputation",
         "pipelineVersion": 0,
         "pipelineInputs": {
             "multiSampleVcf": "this/is/a/fake/file.vcf.gz",
@@ -45,7 +46,7 @@ def prepare_imputation_pipeline(teaspoons_url, token):
         }
     }
 
-    uri = f"{teaspoons_url}/api/pipelineruns/v1/array_imputation/prepare"
+    uri = f"{teaspoons_url}/api/pipelineruns/v1/prepare"
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json",
