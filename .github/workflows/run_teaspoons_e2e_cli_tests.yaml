@@ -20,7 +20,7 @@ on:
         required: true
         type: string
       wdl-method-version:
-        description: 'Version (git tag or branch) of WDL to use'
+        description: 'Version (git tag or branch from service repo) of WDL to use'
         required: true
         type: string
 
