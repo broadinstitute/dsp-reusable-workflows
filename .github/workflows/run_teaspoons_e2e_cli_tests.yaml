@@ -74,7 +74,7 @@ jobs:
           WDL_METHOD_VERSION: ${{ inputs.wdl-method-version }}
         run: |
           cd dsp-reusable-workflows/
-          ls -l
+          ls -l e2e-test
           echo "SETTING UP TEASPOONS RESOURCES"
           python e2e-test/teaspoons_gcp_cli_e2e_test_setup.py
           echo "CONFIGURING CLI"
