@@ -1,20 +1,14 @@
 from workspace_helper import create_gcp_workspace, delete_workspace, share_workspace_grant_owner, add_wdl_to_gcp_workspace
 from helper import create_gcp_billing_project, delete_gcp_billing_project
-from teaspoons_helper import (
-    create_and_populate_terra_group, update_imputation_pipeline_workspace, query_for_user_quota_consumed, 
-    prepare_imputation_pipeline, upload_file_with_signed_url, start_imputation_pipeline, poll_for_imputation_job,
-    download_with_signed_url
-)
+from teaspoons_helper import create_and_populate_terra_group, update_imputation_pipeline_workspace
 
 import os
 import logging
 
 
-
 # Setup configuration
 # The environment variables are injected as part of the e2e test setup which does not pass in any args
 admin_token = os.environ.get("ADMIN_TOKEN") # admin user who has access to the terra billing project
-user_token = os.environ.get("USER_TOKEN") # the user who will kick off the teaspoons job
  
 # e2e test is using the teaspoons qa service account
 teaspoons_sa_email = "teaspoons-qa@broad-dsde-qa.iam.gserviceaccount.com"
@@ -42,8 +36,7 @@ logging.basicConfig(
     datefmt=LOG_DATEFORMAT,
 )
 
-# ---------------------- Start Teaspoons GCP E2E test ----------------------
-found_exception = False
+# ---------------------- Start Teaspoons GCP CLI E2E test SETUP ----------------------
 try:
     logging.info("Starting Teaspoons GCP E2E test...")
     logging.info(f"billing project: {billing_project_name}, env_string: {env_string}")
@@ -67,6 +60,9 @@ try:
         workspace_name, 
         auth_domains=[auth_domain_name], 
         enhanced_bucket_logging=True)
+    
+    # save workspace name to environment variables so cleanup script can get it
+    os.environ["WORKSPACE_NAME"] = workspace_name
 
     # share created workspace with the teaspoons service account
     logging.info("sharing workspace with teaspoons qa service account")
@@ -101,45 +97,11 @@ try:
     logging.info("updating imputation workspace info")
     update_imputation_pipeline_workspace(teaspoons_url, billing_project_name, workspace_name, wdl_method_version, admin_token)
 
-    # query for user quota consumed before running pipeline, expect the default of 0
-    assert 0 == query_for_user_quota_consumed(teaspoons_url, user_token)
-
-    # prepare teaspoons imputation pipeline run
-    logging.info("preparing imputation pipeline run")
-    job_id, pipeline_file_inputs = prepare_imputation_pipeline(teaspoons_url, user_token)
-
-    # make sure we got a writable signed url
-    for key, value in pipeline_file_inputs.items():
-        logging.info(f"attempting to upload a file to {key} input")
-        upload_file_with_signed_url(value['signedUrl'])
-        logging.info("successfully uploaded file")
-
-    # start pipeline run
-    logging.info("starting imputation pipeline run")
-    job_id_from_start_run, result_url = start_imputation_pipeline(job_id, teaspoons_url, user_token)
-
-    assert(job_id == job_id_from_start_run)
-
-    # poll for imputation pipeline
-    logging.info("polling for imputation pipeline")
-    pipeline_output = poll_for_imputation_job(result_url, user_token)
-
-    # grab data using signed url
-    for key, value in pipeline_output.items():
-        logging.info(f"attempting to retrieve {key} output")
-        download_with_signed_url(value)
-        logging.info("successfully downloaded file")
-
-    # query for user quota consumed after running pipeline, expect an increase of 500
-    # because that is the min quota consumed for array_imputation
-    assert 500 == query_for_user_quota_consumed(teaspoons_url, user_token)
-
-    logging.info("TEST COMPLETE")
+    logging.info("SETUP COMPLETE")
 
 except Exception as e:
-    logging.error(f"Exception(s) occurred during test. Details: {e}")
-    found_exception = True
-finally:
+    logging.error(f"Exception(s) occurred during setup. Details: {e}")
+
     # delete workspace
     logging.info("Starting workspace cleanup as part of e2e test...")
     try:
@@ -161,8 +123,4 @@ finally:
         logging.warning(f"Error cleaning up billing project, test script will continue. Error details: {e}")
 
     # Use exit(1) so that GHA will fail if an exception was found during the test
-    if found_exception:
-        logging.error("Exceptions found during test run. Test failed")
-        exit(1)
-    else:
-        logging.info("Test completed successfully")
+    exit(1)
