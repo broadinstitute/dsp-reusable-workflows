@@ -38,7 +38,7 @@ jobs:
         id: setup-python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.12'
       - name: Install terralab cli and other dependencies
         run: |
           cd dsp-reusable-workflows/e2e-test/resources/teaspoons/
@@ -76,7 +76,13 @@ jobs:
           cd dsp-reusable-workflows/
           echo "SETTING UP TEASPOONS RESOURCES"
           python e2e-test/teaspoons_gcp_cli_e2e_test_setup.py
+          echo "CONFIGURING CLI"
+          CONFIG_FILE=$(python -c "import terralab; print(terralab.__file__.replace('__init__.py','.terralab-cli-config'))")
+          TEASPOONS_API_URL="https://teaspoons.$BEE_NAME.bee.envs-terra.bio"
+          sed -i '' 's|^TEASPOONS_API_URL=.*|TEASPOONS_API_URL=$TEASPOONS_API_URL|' $CONFIG_FILE
+          cat $CONFIG_FILE
           echo "RUNNING CLI TEST"
           terralab -h
+          terralab --debug login-with-oauth $USER_TOKEN
           echo "CLEANING UP RESOURCES"
           python e2e-test/teaspoons_gcp_cli_e2e_test_cleanup.py
