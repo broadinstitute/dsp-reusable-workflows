@@ -82,7 +82,7 @@ jobs:
           echo "found config file at $CONFIG_FILE"
           ls $CONFIG_FILE
           TEASPOONS_API_URL="https://teaspoons.$BEE_NAME.bee.envs-terra.bio"
-          sed -i "" "s|^TEASPOONS_API_URL=.*|TEASPOONS_API_URL=$TEASPOONS_API_URL|" $CONFIG_FILE
+          sed -i -e "s|^TEASPOONS_API_URL=.*|TEASPOONS_API_URL=$TEASPOONS_API_URL|" $CONFIG_FILE
           cat $CONFIG_FILE
           echo "RUNNING CLI TEST"
           terralab -h
