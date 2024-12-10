@@ -100,14 +100,15 @@ jobs:
         run: |
           cd terra-scientific-pipelines-service-cli/
           poetry install
+          poetry shell
           
           echo "CONFIGURING CLI"
-          CONFIG_FILE=$(poetry run python -c "import terralab; print(terralab.__file__.replace('__init__.py','.terralab-cli-config'))")
+          CONFIG_FILE=$(python -c "import terralab; print(terralab.__file__.replace('__init__.py','.terralab-cli-config'))")
           echo "found config file at $CONFIG_FILE"
           ls $CONFIG_FILE
           TEASPOONS_API_URL="https://teaspoons.$BEE_NAME.bee.envs-terra.bio"
           sed -i -e "s|^TEASPOONS_API_URL=.*|TEASPOONS_API_URL=$TEASPOONS_API_URL|" $CONFIG_FILE
-          cat $CONFIG_FILE
+          cat $CONFIG_FILE | grep TEASPOONS_API_URL
 
           echo "RUNNING CLI TEST"
           terralab -h
