@@ -15,8 +15,8 @@ on:
         description: 'Name of branch or commit hash in this repo to use'
         required: true
         type: string
-      cli-version:
-        description: 'Version (semantic tag) of terralab cli to use'
+      cli-version-ref:
+        description: 'Name of branch or version (semantic tag) of terralab cli to use'
         required: true
         type: string
       wdl-method-version:
@@ -34,16 +34,33 @@ jobs:
           ref: ${{ inputs.e2e-test-version-ref }}
           repository: broadinstitute/dsp-reusable-workflows
           path: dsp-reusable-workflows/
+      
       - name: Set up python
         id: setup-python
         uses: actions/setup-python@v4
         with:
           python-version: '3.12'
-      - name: Install terralab cli and other dependencies
+      
+      - name: Install test dependencies
         run: |
           cd dsp-reusable-workflows/e2e-test/resources/teaspoons/
           pip install -r requirements.txt
-          pip install terralab-cli==${{ inputs.cli-version }}
+      
+      - name: Checkout cli repo
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.cli-version-ref }}
+          repository: DataBiosphere/terra-scientific-pipelines-service-cli
+          path: terra-scientific-pipelines-service-cli/
+      
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+
+      - name: Install the thick CLI
+        run: |
+          cd terra-scientific-pipelines-service-cli/
+          poetry install
+
       - name: Generate OAuth2 2.0 access token for Terra user
         id: 'obtain_user_token'
         uses: google-github-actions/auth@v1
@@ -54,6 +71,7 @@ jobs:
           access_token_scopes: 'profile, email, openid'
           access_token_subject: 'hermione.owner@quality.firecloud.org'
           export_environment_variables: false
+      
       - name: Generate OAuth2 2.0 access token for admin user and billing project owner
         id: 'obtain_admin_user_token'
         uses: google-github-actions/auth@v1
@@ -64,19 +82,29 @@ jobs:
           access_token_scopes: 'openid, https://www.googleapis.com/auth/userinfo.email, https://www.googleapis.com/auth/userinfo.profile, https://www.googleapis.com/auth/cloud-billing'
           access_token_subject: 'dumbledore.admin@quality.firecloud.org'
           export_environment_variables: false
-      - name: Run e2e test
+      
+      - name: Setup Teaspoons resources
+        id: 'setup-resources'
         env:
           BEE_NAME: ${{ inputs.bee-name }}
           BILLING_PROJECT_NAME: ${{ inputs.billing-project-name }}
           BILLING_ACCOUNT_NAME: 'billingAccounts/00708C-45D19D-27AAFA'
-          USER_TOKEN: ${{ steps.obtain_user_token.outputs.access_token }}
           ADMIN_TOKEN: ${{ steps.obtain_admin_user_token.outputs.access_token }}
           WDL_METHOD_VERSION: ${{ inputs.wdl-method-version }}
         run: |
           cd dsp-reusable-workflows/
-          ls -l e2e-test
-          echo "SETTING UP TEASPOONS RESOURCES"
+
+          # this will export an environment variable WORKSPACE_NAME that will be used in the cleanup step
           python e2e-test/teaspoons_gcp_cli_e2e_test_setup.py
+        
+      - name: Run e2e test with CLI
+        id: 'run-cli-e2e-test'
+        env: 
+          BEE_NAME: ${{ inputs.bee-name }}
+          USER_TOKEN: ${{ steps.obtain_user_token.outputs.access_token }}
+        run: |
+          cd terra-scientific-pipelines-service-cli/
+          
           echo "CONFIGURING CLI"
           CONFIG_FILE=$(python -c "import terralab; print(terralab.__file__.replace('__init__.py','.terralab-cli-config'))")
           echo "found config file at $CONFIG_FILE"
@@ -117,6 +145,8 @@ jobs:
                   break
               elif [ "$STATUS" == "Failed" ]; then
                   echo "Job failed."
+                  # get details including error message
+                  terralab jobs details $JOB_ID
                   TEST_SUCCESS="False"
                   break
               else
@@ -125,9 +155,19 @@ jobs:
               fi
           done
 
+      - name: Clean up Teaspoons resources
+        env:
+          BEE_NAME: ${{ inputs.bee-name }}
+          BILLING_PROJECT_NAME: ${{ inputs.billing-project-name }}
+          ADMIN_TOKEN: ${{ steps.obtain_admin_user_token.outputs.access_token }}
+        run: |
+          cd dsp-reusable-workflows/
+
+          WORKSPACE_NAME="teaspoons-cli-e2e-$BEE_NAME"
           echo "CLEANING UP RESOURCES"
           python e2e-test/teaspoons_gcp_cli_e2e_test_cleanup.py
 
           if [ "$TEST_SUCCESS" == "False" ]; then
+            echo "e2e test failed (waited till after cleanup to fail the workflow)"
             exit(1)
           fi
