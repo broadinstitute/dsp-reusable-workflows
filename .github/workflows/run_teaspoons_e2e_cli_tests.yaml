@@ -115,15 +115,15 @@ jobs:
           touch input_file.vcf.gz
           OUTPUT_BASENAME="test"
           echo "about to run terralab submit"
-          poetry run terralab submit array_imputation --inputs '{"multiSampleVcf": "input_file.vcf.gz", "outputBasename": "$OUTPUT_BASENAME"}' > submit_output
-          echo "about to cat submit_output"
-          cat submit_output
-          JOB_ID=$(cat submit_output | tail -n1 | grep -o '[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}$')
+          SUBMIT_OUTPUT="$(poetry run terralab submit array_imputation --inputs '{\"multiSampleVcf\": \"input_file.vcf.gz\", \"outputBasename\": \"$OUTPUT_BASENAME\"}' 2>&1)"
+          echo "about to echo SUBMIT_OUTPUT"
+          echo "$SUBMIT_OUTPUT"
+          JOB_ID="$(echo \"$SUBMIT_OUTPUT\" | tail -n1 | grep -o '[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}$')"
           echo "created job with ID $JOB_ID"
 
           TEST_SUCCESS="True"
           while true; do
-              STATUS=$(poetry run terralab jobs details $JOB_ID | head -n1 | grep -oP '(?<=Status: ).*')
+              STATUS=$(poetry run terralab jobs details $JOB_ID  2>&1 | head -n1 | grep -oP '(?<=Status: ).*')
               if [ "$STATUS" == "Succeeded" ]; then
                   echo "Job succeeded!"
 
