@@ -118,7 +118,8 @@ jobs:
           SUBMIT_OUTPUT="$(poetry run terralab submit array_imputation --inputs '{"multiSampleVcf": "input_file.vcf.gz", "outputBasename": "$OUTPUT_BASENAME"}' 2>&1)"
           echo "about to echo SUBMIT_OUTPUT"
           echo "$SUBMIT_OUTPUT"
-          JOB_ID="$(echo "$SUBMIT_OUTPUT" | tail -n1 | grep -o '[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}$')"
+          echo "$SUBMIT_OUTPUT" | tail -n1 | grep -o '[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}'
+          JOB_ID="$(echo "$SUBMIT_OUTPUT" | tail -n1 | grep -o '[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}')"
           echo "created job with ID $JOB_ID"
 
           TEST_SUCCESS="True"
