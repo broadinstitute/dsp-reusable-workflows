@@ -114,9 +114,9 @@ jobs:
 
           touch input_file.vcf.gz
           OUTPUT_BASENAME="test"
-          SUBMIT_OUTPUT=$(poetry run terralab submit array_imputation --inputs '{"multiSampleVcf": "input_file.vcf.gz", "outputBasename": "$OUTPUT_BASENAME"}')
-          echo $SUBMIT_OUTPUT
-          JOB_ID=$(echo $SUBMIT_OUTPUT | tail -n1 | grep -o '[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}$')
+          poetry run terralab submit array_imputation --inputs '{"multiSampleVcf": "input_file.vcf.gz", "outputBasename": "$OUTPUT_BASENAME"}' > submit_output
+          cat submit_output
+          JOB_ID=$(cat submit_output | tail -n1 | grep -o '[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}$')
           echo "created job with ID $JOB_ID"
 
           TEST_SUCCESS="True"
