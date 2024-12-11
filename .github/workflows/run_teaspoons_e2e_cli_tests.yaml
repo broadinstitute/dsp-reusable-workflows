@@ -93,6 +93,7 @@ jobs:
           python e2e-test/teaspoons_gcp_cli_e2e_test_setup.py
         
       - name: Run e2e test with CLI
+        shell: bash -leo pipefail {0}
         id: 'run-cli-e2e-test'
         env: 
           BEE_NAME: ${{ inputs.bee-name }}
@@ -100,7 +101,6 @@ jobs:
         run: |
           cd terra-scientific-pipelines-service-cli/
           poetry install
-          source $HOME/.poetry/env
           
           echo "CONFIGURING CLI"
           CONFIG_FILE=$(poetry run python -c "import terralab; print(terralab.__file__.replace('__init__.py','.terralab-cli-config'))")
