@@ -93,7 +93,6 @@ jobs:
           python e2e-test/teaspoons_gcp_cli_e2e_test_setup.py
         
       - name: Run e2e test with CLI
-        shell: bash -leo pipefail {0}
         id: 'run-cli-e2e-test'
         env: 
           BEE_NAME: ${{ inputs.bee-name }}
@@ -111,22 +110,22 @@ jobs:
           cat $CONFIG_FILE | grep TEASPOONS_API_URL
 
           echo "RUNNING CLI TEST"
-          terralab -h
-          terralab --debug login-with-oauth $USER_TOKEN
+          poetry run terralab -h
+          poetry run terralab --debug login-with-oauth $USER_TOKEN
 
           touch input_file.vcf.gz
           OUTPUT_BASENAME="test"
-          SUBMIT_OUTPUT=$(terralab submit array_imputation --inputs '{"multiSampleVcf": "input_file.vcf.gz", "outputBasename": "$OUTPUT_BASENAME"}')
+          SUBMIT_OUTPUT=$(poetry run terralab submit array_imputation --inputs '{"multiSampleVcf": "input_file.vcf.gz", "outputBasename": "$OUTPUT_BASENAME"}')
           JOB_ID = $(echo $SUBMIT_OUTPUT | tail -n1 | grep -o '[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}$')
           echo "created job with ID $JOB_ID"
 
           TEST_SUCCESS="True"
           while true; do
-              STATUS=$(terralab jobs details $JOB_ID | head -n1 | grep -oP '(?<=Status: ).*')
+              STATUS=$(poetry run terralab jobs details $JOB_ID | head -n1 | grep -oP '(?<=Status: ).*')
               if [ "$STATUS" == "Succeeded" ]; then
                   echo "Job succeeded!"
 
-                  terralab download $JOB_ID
+                  poetry run terralab download $JOB_ID
 
                   for expected_file in "$OUTPUT_BASENAME.imputed.vcf.gz" "$OUTPUT_BASENAME.imputed.vcf.gz.tbi" "${OUTPUT_BASENAME}_chunk_info.tsv"; do
                       echo "Checking for presence of $expected_file"
@@ -143,7 +142,7 @@ jobs:
               elif [ "$STATUS" == "Failed" ]; then
                   echo "Job failed."
                   # get details including error message
-                  terralab jobs details $JOB_ID
+                  poetry run terralab jobs details $JOB_ID
                   TEST_SUCCESS="False"
                   break
               else
