@@ -122,10 +122,14 @@ jobs:
           JOB_ID="$(echo "$SUBMIT_OUTPUT" | tail -n1 | grep -o '[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}')"
           echo "created job with ID $JOB_ID"
 
+          echo "waiting 10 min before beginning to check status"
+          sleep 600
+
           TEST_SUCCESS="True"
           while true; do
               STATUS=$(poetry run terralab jobs details $JOB_ID  2>&1 | head -n1 | grep -oP '(?<=Status: ).*')
-              if [ "$STATUS" == "Succeeded" ]; then
+              # note the status will have text color artifacts so we need to search for 'Succeeded' in that string
+              if [[ $STATUS == *"Succeeded"* ]]; then
                   echo "Job succeeded!"
 
                   poetry run terralab download $JOB_ID
@@ -149,8 +153,8 @@ jobs:
                   TEST_SUCCESS="False"
                   break
               else
-                  echo "Current status: $STATUS. Waiting for 1 minute before checking again..."
-                  sleep 60
+                  echo "Current status: $STATUS. Waiting for 2 minutes before checking again..."
+                  sleep 120
               fi
           done
 
