@@ -43,7 +43,8 @@ def prepare_imputation_pipeline(teaspoons_url, token):
         "pipelineInputs": {
             "multiSampleVcf": "this/is/a/fake/file.vcf.gz",
             "outputBasename": "fake_basename"
-        }
+        },
+        "description": f"e2e test run"
     }
 
     uri = f"{teaspoons_url}/api/pipelineruns/v1/prepare"
@@ -67,7 +68,6 @@ def prepare_imputation_pipeline(teaspoons_url, token):
 # run imputation beagle pipeline
 def start_imputation_pipeline(jobId, teaspoons_url, token):
     request_body = {
-        "description": f"e2e test run for jobId {jobId}",
         "jobControl": {
             "id": f'{jobId}'
         }
