@@ -91,6 +91,8 @@ jobs:
 
           # this will export an environment variable WORKSPACE_NAME that will be used in the cleanup step
           python e2e-test/teaspoons_gcp_cli_e2e_test_setup.py
+
+          echo "workspace_name=$WORKSPACE_NAME" >> $GITHUB_OUTPUT
         
       - name: Run e2e test with CLI
         id: 'run-cli-e2e-test'
@@ -101,7 +103,7 @@ jobs:
           cd terra-scientific-pipelines-service-cli/
           poetry install
           
-          echo "CONFIGURING CLI"
+          echo "### CONFIGURING CLI ###"
           CONFIG_FILE=$(poetry run python -c "import terralab; print(terralab.__file__.replace('__init__.py','.terralab-cli-config'))")
           echo "found config file at $CONFIG_FILE"
           ls $CONFIG_FILE
@@ -109,20 +111,16 @@ jobs:
           sed -i -e "s|^TEASPOONS_API_URL=.*|TEASPOONS_API_URL=$TEASPOONS_API_URL|" $CONFIG_FILE
           cat $CONFIG_FILE | grep TEASPOONS_API_URL
 
-          echo "RUNNING CLI TEST"
+          echo "### RUNNING CLI TEST ###"
           poetry run terralab --debug login-with-oauth $USER_TOKEN
 
           touch input_file.vcf.gz
           OUTPUT_BASENAME="test"
-          echo "about to run terralab submit"
           SUBMIT_OUTPUT="$(poetry run terralab submit array_imputation --inputs '{"multiSampleVcf": "input_file.vcf.gz", "outputBasename": "$OUTPUT_BASENAME"}' 2>&1)"
-          echo "about to echo SUBMIT_OUTPUT"
-          echo "$SUBMIT_OUTPUT"
-          echo "$SUBMIT_OUTPUT" | tail -n1 | grep -o '[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}'
           JOB_ID="$(echo "$SUBMIT_OUTPUT" | tail -n1 | grep -o '[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}')"
-          echo "created job with ID $JOB_ID"
+          echo "Created job with ID $JOB_ID"
 
-          echo "waiting 10 min before beginning to check status"
+          echo "Waiting 10 minutes before beginning to check status"
           sleep 600
 
           TEST_SUCCESS="True"
@@ -153,7 +151,7 @@ jobs:
                   TEST_SUCCESS="False"
                   break
               else
-                  echo "Current status: $STATUS. Waiting for 2 minutes before checking again..."
+                  echo "Current status: $STATUS. Waiting 2 minutes before checking again..."
                   sleep 120
               fi
           done
@@ -163,11 +161,12 @@ jobs:
           BEE_NAME: ${{ inputs.bee-name }}
           BILLING_PROJECT_NAME: ${{ inputs.billing-project-name }}
           ADMIN_TOKEN: ${{ steps.obtain_admin_user_token.outputs.access_token }}
+          WORKSPACE_NAME: ${{ steps.setup-resources.outputs.workspace_name }}
         run: |
           cd dsp-reusable-workflows/
 
-          WORKSPACE_NAME="teaspoons-cli-e2e-$BEE_NAME"
-          echo "CLEANING UP RESOURCES"
+          echo "### CLEANING UP RESOURCES ###"
+          echo "found runner workspace $WORKSPACE_NAME; attempting to delete"
           python e2e-test/teaspoons_gcp_cli_e2e_test_cleanup.py
 
           if [ "$TEST_SUCCESS" == "False" ]; then
