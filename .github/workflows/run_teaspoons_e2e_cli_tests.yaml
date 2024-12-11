@@ -110,13 +110,12 @@ jobs:
           cat $CONFIG_FILE | grep TEASPOONS_API_URL
 
           echo "RUNNING CLI TEST"
-          poetry run terralab -h
           poetry run terralab --debug login-with-oauth $USER_TOKEN
 
           touch input_file.vcf.gz
           OUTPUT_BASENAME="test"
           SUBMIT_OUTPUT=$(poetry run terralab submit array_imputation --inputs '{"multiSampleVcf": "input_file.vcf.gz", "outputBasename": "$OUTPUT_BASENAME"}')
-          JOB_ID = $(echo $SUBMIT_OUTPUT | tail -n1 | grep -o '[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}$')
+          JOB_ID=$(echo $SUBMIT_OUTPUT | tail -n1 | grep -o '[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}$')
           echo "created job with ID $JOB_ID"
 
           TEST_SUCCESS="True"
