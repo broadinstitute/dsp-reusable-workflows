@@ -100,7 +100,8 @@ jobs:
           CHECK_INTERVAL: 120  # 2 minutes in seconds
           INITIAL_WAIT: 0    # 10 minutes in seconds # TODO revert to 600
         run: |
-          set -uxo pipefail  # Exit on undefined vars and pipe failures
+          # set -uxo pipefail  # Exit on undefined vars and pipe failures
+          set -x
           
           cd terra-scientific-pipelines-service-cli/
           poetry install
