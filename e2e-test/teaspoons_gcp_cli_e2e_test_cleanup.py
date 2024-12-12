@@ -11,7 +11,7 @@ import logging
 admin_token = os.environ.get("ADMIN_TOKEN") # admin user who has access to the terra billing project
 
 billing_project_name = os.environ.get("BILLING_PROJECT_NAME")
-workspace_name = os.environ.get("WORKSPACE_NAME") # this was set in the setup script
+workspace_name = os.environ.get("WORKSPACE_NAME")
 
 bee_name = os.environ.get("BEE_NAME")
 env_string = bee_name + ".bee.envs-terra.bio"
