@@ -134,7 +134,7 @@ jobs:
                   poetry run terralab download $JOB_ID --local_destination $outputs_dir
 
                   echo "checking for presence of a downloaded output file in $outputs_dir"
-                  if [[ $(ls $outputs_dir | wc -l) == 0 ]]; then
+                  if [[ $(ls $outputs_dir | wc -l) -eq 0 ]]; then
                     echo "Did not find any output files in $outputs_dir!"
                     TEST_SUCCESS="False"
                   fi
