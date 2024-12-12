@@ -98,9 +98,9 @@ jobs:
           USER_TOKEN: ${{ steps.obtain_user_token.outputs.access_token }}
           MAX_WAIT_TIME: 1800  # 30 min in seconds
           CHECK_INTERVAL: 120  # 2 minutes in seconds
-          INITIAL_WAIT: 600    # 10 minutes in seconds
+          INITIAL_WAIT: 0    # 10 minutes in seconds # TODO revert to 600
         run: |
-          set -euo pipefail  # Exit on error, undefined vars, and pipe failures
+          set -uxo pipefail  # Exit on undefined vars and pipe failures
           
           cd terra-scientific-pipelines-service-cli/
           poetry install
@@ -138,14 +138,14 @@ jobs:
                   exit 1
               fi
 
-              echo "getting job status"
+              # echo "getting job status"
               poetry run terralab jobs details $JOB_ID
 
-              echo "storing job status in status.txt"
+              # echo "storing job status in status.txt"
               poetry run terralab jobs details $JOB_ID  2>&1 | head -n1 | grep -oP '(?<=Status: ).*' > status.txt
-              echo "running cat status.txt"
+              # echo "running cat status.txt"
               cat status.txt
-              echo "running STATUS=$(cat status.txt)"
+              # echo "running STATUS=$(cat status.txt)"
               STATUS=$(cat status.txt)
               echo "status is $STATUS"
               
