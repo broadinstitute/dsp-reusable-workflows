@@ -131,11 +131,14 @@ jobs:
           while true; do
               current_time=$(date +%s)
               elapsed_time=$((current_time - start_time))
+              echo "time elapsed since submission: ${elapsed_time} seconds"
               
               if [ $elapsed_time -gt $MAX_WAIT_TIME ]; then
                   echo "Exceeded maximum wait time of $MAX_WAIT_TIME seconds"
                   exit 1
               fi
+
+              echo "getting job status"
 
               STATUS=$(poetry run terralab jobs details "$JOB_ID" 2>&1 | head -n1 | grep -oP '(?<=Status: ).*')
               
