@@ -92,7 +92,8 @@ jobs:
           # this will export an environment variable WORKSPACE_NAME that will be used in the cleanup step
           python e2e-test/teaspoons_gcp_cli_e2e_test_setup.py
 
-          echo "workspace_name=$WORKSPACE_NAME" >> $GITHUB_OUTPUT
+          echo "setting WORKSPACE_NAME output to $WORKSPACE_NAME"
+          echo "WORKSPACE_NAME=$WORKSPACE_NAME" >> $GITHUB_OUTPUT
         
       - name: Run e2e test with CLI
         id: run-cli-e2e-test
@@ -167,11 +168,10 @@ jobs:
           BEE_NAME: ${{ inputs.bee-name }}
           BILLING_PROJECT_NAME: ${{ inputs.billing-project-name }}
           ADMIN_TOKEN: ${{ steps.obtain_admin_user_token.outputs.access_token }}
-        with:
-          WORKSPACE_NAME: ${{ steps.setup-resources.outputs.workspace_name }}
+          WORKSPACE_NAME: ${{ steps.setup-resources.outputs.WORKSPACE_NAME }}
         run: |
           cd dsp-reusable-workflows/
 
           echo "### CLEANING UP RESOURCES ###"
-          echo "found runner workspace $WORKSPACE_NAME; attempting to delete"
+          echo "found runner workspace $WORKSPACE_NAME in project $BILLING_PROJECT_NAME; attempting to delete both"
           python e2e-test/teaspoons_gcp_cli_e2e_test_cleanup.py
