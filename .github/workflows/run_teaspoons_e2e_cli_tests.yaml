@@ -124,10 +124,10 @@ jobs:
           [ -n "$JOB_ID" ] || { echo "Failed to extract job ID"; exit 1; }
           echo "Created job with ID $JOB_ID"
 
+          start_time=$(date +%s)
           echo "Waiting $INITIAL_WAIT seconds before beginning to check status"
           sleep "$INITIAL_WAIT"
 
-          start_time=$(date +%s)
           while true; do
               current_time=$(date +%s)
               elapsed_time=$((current_time - start_time))
@@ -142,7 +142,7 @@ jobs:
               poetry run terralab jobs details $JOB_ID
 
               echo "storing job status in STATUS"
-              STATUS=$(poetry run terralab jobs details $JOB_ID 2>&1 | head -n1 | grep -oP '(?<=Status: ).*')
+              STATUS=$(poetry run terralab jobs details $JOB_ID  2>&1 | head -n1 | grep -oP '(?<=Status: ).*')
               echo "status is $STATUS"
               
               if [[ $STATUS == *"Succeeded"* ]]; then
