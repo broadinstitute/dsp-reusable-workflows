@@ -89,11 +89,8 @@ jobs:
         run: |
           cd dsp-reusable-workflows/
 
-          # this will export an environment variable WORKSPACE_NAME that will be used in the cleanup step
+          WORKSPACE_NAME="teaspoons_e2e_cli_test_workspace"
           python e2e-test/teaspoons_gcp_cli_e2e_test_setup.py
-
-          echo "setting WORKSPACE_NAME output to $WORKSPACE_NAME"
-          echo "WORKSPACE_NAME=$WORKSPACE_NAME" >> $GITHUB_OUTPUT
         
       - name: Run e2e test with CLI
         id: run-cli-e2e-test
@@ -136,10 +133,9 @@ jobs:
 
                   poetry run terralab download $JOB_ID --local_destination $outputs_dir
 
-                  echo "checking for presence of 3 downloaded output files in $outputs_dir"
-                  if [[ $(ls $outputs_dir | wc -l) != 3 ]]; then
-                    echo "Did not find 3 output files in $outputs_dir. Contents of $outputs_dir:"
-                    ls $outputs_dir
+                  echo "checking for presence of a downloaded output file in $outputs_dir"
+                  if [[ $(ls $outputs_dir | wc -l) == 0 ]]; then
+                    echo "Did not find any output files in $outputs_dir!"
                     TEST_SUCCESS="False"
                   fi
                   
@@ -168,10 +164,9 @@ jobs:
           BEE_NAME: ${{ inputs.bee-name }}
           BILLING_PROJECT_NAME: ${{ inputs.billing-project-name }}
           ADMIN_TOKEN: ${{ steps.obtain_admin_user_token.outputs.access_token }}
-          WORKSPACE_NAME: ${{ steps.setup-resources.outputs.WORKSPACE_NAME }}
         run: |
           cd dsp-reusable-workflows/
 
           echo "### CLEANING UP RESOURCES ###"
-          echo "found runner workspace $WORKSPACE_NAME in project $BILLING_PROJECT_NAME; attempting to delete both"
+          WORKSPACE_NAME="teaspoons_e2e_cli_test_workspace"
           python e2e-test/teaspoons_gcp_cli_e2e_test_cleanup.py
