@@ -140,14 +140,14 @@ jobs:
 
               echo "getting job status"
 
-              STATUS=$(poetry run terralab jobs details "$JOB_ID" 2>&1 | head -n1 | grep -oP '(?<=Status: ).*')
+              STATUS=$(poetry run terralab jobs details $JOB_ID 2>&1 | head -n1 | grep -oP '(?<=Status: ).*')
               
               if [[ $STATUS == *"Succeeded"* ]]; then
                   echo "Job succeeded!"
                   outputs_dir="outputs"
                   mkdir -p "$outputs_dir"
 
-                  poetry run terralab download "$JOB_ID" --local_destination "$outputs_dir"
+                  poetry run terralab download $JOB_ID --local_destination "$outputs_dir"
 
                   if ! find "$outputs_dir" -mindepth 1 -print -quit | grep -q .; then
                       echo "Did not find any output files in $outputs_dir!"
@@ -159,7 +159,7 @@ jobs:
                   
               elif [[ $STATUS == *"Failed"* ]]; then
                   echo "Job failed."
-                  poetry run terralab jobs details "$JOB_ID"
+                  poetry run terralab jobs details $JOB_ID
                   exit 1
               else
                   echo "Current status: $STATUS. Waiting $CHECK_INTERVAL seconds before checking again..."
