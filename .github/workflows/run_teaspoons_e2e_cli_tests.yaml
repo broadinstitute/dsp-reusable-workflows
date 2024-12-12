@@ -139,8 +139,11 @@ jobs:
               fi
 
               echo "getting job status"
+              poetry run terralab jobs details $JOB_ID
 
+              echo "storing job status in STATUS"
               STATUS=$(poetry run terralab jobs details $JOB_ID 2>&1 | head -n1 | grep -oP '(?<=Status: ).*')
+              echo "status is $STATUS"
               
               if [[ $STATUS == *"Succeeded"* ]]; then
                   echo "Job succeeded!"
@@ -168,6 +171,7 @@ jobs:
           done
 
       - name: Clean up Teaspoons resources
+        if: always()
         env:
           BEE_NAME: ${{ inputs.bee-name }}
           BILLING_PROJECT_NAME: ${{ inputs.billing-project-name }}
