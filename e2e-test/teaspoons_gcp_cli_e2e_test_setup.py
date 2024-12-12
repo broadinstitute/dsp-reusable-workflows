@@ -18,7 +18,7 @@ env_string = bee_name + ".bee.envs-terra.bio"
 
 billing_account_name = os.environ.get("BILLING_ACCOUNT_NAME")
 billing_project_name = os.environ.get("BILLING_PROJECT_NAME")
-workspace_name = ""
+workspace_name = os.environ.get("WORKSPACE_NAME")
 
 rawls_url = f"https://rawls.{env_string}"
 firecloud_orch_url = f"https://firecloudorch.{env_string}"
@@ -60,9 +60,6 @@ try:
         workspace_name, 
         auth_domains=[auth_domain_name], 
         enhanced_bucket_logging=True)
-    
-    # save workspace name to environment variables so cleanup script can get it
-    os.environ["WORKSPACE_NAME"] = workspace_name
 
     # share created workspace with the teaspoons service account
     logging.info("sharing workspace with teaspoons qa service account")
