@@ -143,7 +143,7 @@ jobs:
               poetry run terralab jobs list
 
               # echo "storing job status in status.txt"
-              poetry run terralab jobs details $JOB_ID  2>&1 | head -n1 > status.txt
+              poetry run terralab jobs details $JOB_ID  2>&1 | head -n 1 > status.txt
               # echo "running cat status.txt"
               cat status.txt
               # echo "running STATUS=$(cat status.txt)"
