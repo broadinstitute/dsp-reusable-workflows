@@ -57,7 +57,7 @@ jobs:
         uses: snok/install-poetry@v1
 
       - name: Generate OAuth2 2.0 access token for Terra user
-        id: 'obtain_user_token'
+        id: obtain_user_token
         uses: google-github-actions/auth@v1
         with:
           token_format: 'access_token'
@@ -68,7 +68,7 @@ jobs:
           export_environment_variables: false
       
       - name: Generate OAuth2 2.0 access token for admin user and billing project owner
-        id: 'obtain_admin_user_token'
+        id: obtain_admin_user_token
         uses: google-github-actions/auth@v1
         with:
           token_format: 'access_token'
@@ -79,7 +79,7 @@ jobs:
           export_environment_variables: false
       
       - name: Setup Teaspoons resources
-        id: 'setup-resources'
+        id: setup-resources
         env:
           BEE_NAME: ${{ inputs.bee-name }}
           BILLING_PROJECT_NAME: ${{ inputs.billing-project-name }}
@@ -95,7 +95,7 @@ jobs:
           echo "workspace_name=$WORKSPACE_NAME" >> $GITHUB_OUTPUT
         
       - name: Run e2e test with CLI
-        id: 'run-cli-e2e-test'
+        id: run-cli-e2e-test
         env: 
           BEE_NAME: ${{ inputs.bee-name }}
           USER_TOKEN: ${{ steps.obtain_user_token.outputs.access_token }}
@@ -130,18 +130,17 @@ jobs:
               if [[ $STATUS == *"Succeeded"* ]]; then
                   echo "Job succeeded!"
 
-                  poetry run terralab download $JOB_ID
+                  outputs_dir="outputs"
+                  mkdir $outputs_dir
 
-                  for expected_file in "$OUTPUT_BASENAME.imputed.vcf.gz" "$OUTPUT_BASENAME.imputed.vcf.gz.tbi" "${OUTPUT_BASENAME}_chunk_info.tsv"; do
-                      echo "Checking for presence of $expected_file"
-                      if [ -f $expected_file ]; then
-                          echo "$expected_file exists"
-                      else
-                          echo "$expected_file does not exist"
-                          TEST_SUCCESS="False"
-                          break
-                      fi
-                  done
+                  poetry run terralab download $JOB_ID --local_destination $outputs_dir
+
+                  echo "checking for presence of 3 downloaded output files in $outputs_dir"
+                  if [[ $(ls $outputs_dir | wc -l) != 3 ]]; then
+                    echo "Did not find 3 output files in $outputs_dir. Contents of $outputs_dir:"
+                    ls $outputs_dir
+                    TEST_SUCCESS="False"
+                  fi
                   
                   break
               elif [ "$STATUS" == "Failed" ]; then
@@ -156,11 +155,19 @@ jobs:
               fi
           done
 
+          if [ "$TEST_SUCCESS" == "False" ]; then
+            echo "### TEST FAILED! ###"
+            exit(1)
+          fi
+
+          echo "### TEST SUCCEEDED! ###"
+
       - name: Clean up Teaspoons resources
         env:
           BEE_NAME: ${{ inputs.bee-name }}
           BILLING_PROJECT_NAME: ${{ inputs.billing-project-name }}
           ADMIN_TOKEN: ${{ steps.obtain_admin_user_token.outputs.access_token }}
+        with:
           WORKSPACE_NAME: ${{ steps.setup-resources.outputs.workspace_name }}
         run: |
           cd dsp-reusable-workflows/
@@ -168,8 +175,3 @@ jobs:
           echo "### CLEANING UP RESOURCES ###"
           echo "found runner workspace $WORKSPACE_NAME; attempting to delete"
           python e2e-test/teaspoons_gcp_cli_e2e_test_cleanup.py
-
-          if [ "$TEST_SUCCESS" == "False" ]; then
-            echo "e2e test failed (waited till after cleanup to fail the workflow)"
-            exit(1)
-          fi
