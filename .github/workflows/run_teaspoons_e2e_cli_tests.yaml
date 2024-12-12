@@ -96,67 +96,73 @@ jobs:
         env: 
           BEE_NAME: ${{ inputs.bee-name }}
           USER_TOKEN: ${{ steps.obtain_user_token.outputs.access_token }}
+          MAX_WAIT_TIME: 1800  # 30 min in seconds
+          CHECK_INTERVAL: 120  # 2 minutes in seconds
+          INITIAL_WAIT: 600    # 10 minutes in seconds
         run: |
+          set -euo pipefail  # Exit on error, undefined vars, and pipe failures
+          
           cd terra-scientific-pipelines-service-cli/
           poetry install
-          
+
           echo "### CONFIGURING CLI ###"
           CONFIG_FILE=$(poetry run python -c "import terralab; print(terralab.__file__.replace('__init__.py','.terralab-cli-config'))")
           echo "found config file at $CONFIG_FILE"
-          ls $CONFIG_FILE
+          [ -f "$CONFIG_FILE" ] || { echo "Config file not found"; exit 1; }
+          
           TEASPOONS_API_URL="https://teaspoons.$BEE_NAME.bee.envs-terra.bio"
-          sed -i -e "s|^TEASPOONS_API_URL=.*|TEASPOONS_API_URL=$TEASPOONS_API_URL|" $CONFIG_FILE
-          cat $CONFIG_FILE | grep TEASPOONS_API_URL
+          sed -i -e "s|^TEASPOONS_API_URL=.*|TEASPOONS_API_URL=$TEASPOONS_API_URL|" "$CONFIG_FILE"
+          grep TEASPOONS_API_URL "$CONFIG_FILE" || { echo "Failed to update config"; exit 1; }
 
           echo "### RUNNING CLI TEST ###"
-          poetry run terralab --debug login-with-oauth $USER_TOKEN
+          poetry run terralab --debug login-with-oauth "$USER_TOKEN"
 
           touch input_file.vcf.gz
           OUTPUT_BASENAME="test"
           SUBMIT_OUTPUT="$(poetry run terralab submit array_imputation --inputs '{"multiSampleVcf": "input_file.vcf.gz", "outputBasename": "$OUTPUT_BASENAME"}' 2>&1)"
           JOB_ID="$(echo "$SUBMIT_OUTPUT" | tail -n1 | grep -o '[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}')"
+          [ -n "$JOB_ID" ] || { echo "Failed to extract job ID"; exit 1; }
           echo "Created job with ID $JOB_ID"
 
-          echo "Waiting 10 minutes before beginning to check status"
-          sleep 600
+          echo "Waiting $INITIAL_WAIT seconds before beginning to check status"
+          sleep "$INITIAL_WAIT"
 
-          TEST_SUCCESS="True"
+          start_time=$(date +%s)
           while true; do
-              STATUS=$(poetry run terralab jobs details $JOB_ID  2>&1 | head -n1 | grep -oP '(?<=Status: ).*')
-              # note the status will have text color artifacts so we need to search for 'Succeeded' in that string
+              current_time=$(date +%s)
+              elapsed_time=$((current_time - start_time))
+              
+              if [ $elapsed_time -gt $MAX_WAIT_TIME ]; then
+                  echo "Exceeded maximum wait time of $MAX_WAIT_TIME seconds"
+                  exit 1
+              fi
+
+              STATUS=$(poetry run terralab jobs details "$JOB_ID" 2>&1 | head -n1 | grep -oP '(?<=Status: ).*')
+              
               if [[ $STATUS == *"Succeeded"* ]]; then
                   echo "Job succeeded!"
-
                   outputs_dir="outputs"
-                  mkdir $outputs_dir
+                  mkdir -p "$outputs_dir"
 
-                  poetry run terralab download $JOB_ID --local_destination $outputs_dir
+                  poetry run terralab download "$JOB_ID" --local_destination "$outputs_dir"
 
-                  echo "checking for presence of a downloaded output file in $outputs_dir"
-                  if [[ $(ls $outputs_dir | wc -l) -eq 0 ]]; then
-                    echo "Did not find any output files in $outputs_dir!"
-                    TEST_SUCCESS="False"
+                  if ! find "$outputs_dir" -mindepth 1 -print -quit | grep -q .; then
+                      echo "Did not find any output files in $outputs_dir!"
+                      exit 1
                   fi
                   
-                  break
-              elif [ "$STATUS" == "Failed" ]; then
+                  echo "### TEST SUCCEEDED! ###"
+                  exit 0
+                  
+              elif [[ $STATUS == *"Failed"* ]]; then
                   echo "Job failed."
-                  # get details including error message
-                  poetry run terralab jobs details $JOB_ID
-                  TEST_SUCCESS="False"
-                  break
+                  poetry run terralab jobs details "$JOB_ID"
+                  exit 1
               else
-                  echo "Current status: $STATUS. Waiting 2 minutes before checking again..."
-                  sleep 120
+                  echo "Current status: $STATUS. Waiting $CHECK_INTERVAL seconds before checking again..."
+                  sleep "$CHECK_INTERVAL"
               fi
           done
-
-          if [ "$TEST_SUCCESS" == "False" ]; then
-            echo "### TEST FAILED! ###"
-            exit(1)
-          fi
-
-          echo "### TEST SUCCEEDED! ###"
 
       - name: Clean up Teaspoons resources
         env:
