@@ -348,9 +348,9 @@ try:
         download_with_signed_url(value)
         logging.info("successfully downloaded file")
 
-    # query for user quota consumed after running pipeline, expect an increase of 50
-    # from quota consumed method used for testing
-    assert 50 == query_for_user_quota_consumed(teaspoons_url, user_token)
+    # query for user quota consumed after running pipeline, expect an increase of 500
+    # because that is the min quota consumed for array_imputation
+    assert 500 == query_for_user_quota_consumed(teaspoons_url, user_token)
 
     logging.info("TEST COMPLETE")
 
