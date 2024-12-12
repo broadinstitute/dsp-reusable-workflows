@@ -86,10 +86,9 @@ jobs:
           BILLING_ACCOUNT_NAME: 'billingAccounts/00708C-45D19D-27AAFA'
           ADMIN_TOKEN: ${{ steps.obtain_admin_user_token.outputs.access_token }}
           WDL_METHOD_VERSION: ${{ inputs.wdl-method-version }}
+          WORKSPACE_NAME: 'teaspoons_e2e_cli_test_workspace'
         run: |
           cd dsp-reusable-workflows/
-
-          WORKSPACE_NAME="teaspoons_e2e_cli_test_workspace"
           python e2e-test/teaspoons_gcp_cli_e2e_test_setup.py
         
       - name: Run e2e test with CLI
@@ -164,9 +163,9 @@ jobs:
           BEE_NAME: ${{ inputs.bee-name }}
           BILLING_PROJECT_NAME: ${{ inputs.billing-project-name }}
           ADMIN_TOKEN: ${{ steps.obtain_admin_user_token.outputs.access_token }}
+          WORKSPACE_NAME: 'teaspoons_e2e_cli_test_workspace'
         run: |
           cd dsp-reusable-workflows/
 
           echo "### CLEANING UP RESOURCES ###"
-          WORKSPACE_NAME="teaspoons_e2e_cli_test_workspace"
           python e2e-test/teaspoons_gcp_cli_e2e_test_cleanup.py
