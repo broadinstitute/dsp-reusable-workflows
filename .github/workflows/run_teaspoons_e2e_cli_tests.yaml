@@ -89,7 +89,7 @@ jobs:
           WORKSPACE_NAME: 'teaspoons_e2e_cli_test_workspace'
         run: |
           cd dsp-reusable-workflows/
-          python e2e-test/teaspoons_gcp_cli_e2e_test_setup.py
+          python e2e-test/teaspoons_gcp_e2e_cli_test_setup.py
         
       - name: Run e2e test with CLI
         id: run-cli-e2e-test
@@ -178,4 +178,4 @@ jobs:
           cd dsp-reusable-workflows/
 
           echo "### CLEANING UP RESOURCES ###"
-          python e2e-test/teaspoons_gcp_cli_e2e_test_cleanup.py
+          python e2e-test/teaspoons_gcp_e2e_cli_test_cleanup.py
