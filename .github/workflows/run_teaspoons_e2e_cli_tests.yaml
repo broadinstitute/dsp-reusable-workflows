@@ -121,7 +121,7 @@ jobs:
 
           touch "$INPUT_FILE"
           echo "Submitting new job"
-          INPUTS_JSON={\"multiSampleVcf\": \"$INPUT_FILE\", \"outputBasename\": \"$OUTPUT_BASENAME\"}
+          INPUTS_JSON={\"multiSampleVcf\":\"$INPUT_FILE\",\"outputBasename\":\"$OUTPUT_BASENAME\"}
           SUBMIT_OUTPUT="$(poetry run terralab submit array_imputation --inputs $INPUTS_JSON 2>&1)"
           # SUBMIT_OUTPUT="$(poetry run terralab submit array_imputation --inputs '{"multiSampleVcf": "$INPUT_FILE", "outputBasename": "$OUTPUT_BASENAME"}' 2>&1)"
           JOB_ID="$(echo "$SUBMIT_OUTPUT" | tail -n1 | grep -o '[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}')"
