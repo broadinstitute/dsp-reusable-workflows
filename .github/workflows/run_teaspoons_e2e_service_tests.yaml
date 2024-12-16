@@ -69,4 +69,4 @@ jobs:
           WDL_METHOD_VERSION: ${{ inputs.wdl-method-version }}
         run: |
           cd dsp-reusable-workflows/
-          python e2e-test/teaspoons_gcp_e2e_test.py
+          python e2e-test/teaspoons_gcp_e2e_service_test.py
