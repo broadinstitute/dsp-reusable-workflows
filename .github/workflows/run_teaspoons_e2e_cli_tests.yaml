@@ -99,6 +99,8 @@ jobs:
           MAX_WAIT_TIME: 1800  # 30 min in seconds
           CHECK_INTERVAL: 120  # 2 minutes in seconds
           INITIAL_WAIT: 600    # 10 minutes in seconds
+          INPUT_FILE: 'input_file.vcf.gz'
+          OUTPUT_BASENAME: 'test'
         run: |
           set -eu
           
@@ -117,10 +119,9 @@ jobs:
           echo "### RUNNING CLI TEST ###"
           poetry run terralab --debug login-with-oauth "$USER_TOKEN"
 
-          touch input_file.vcf.gz
-          OUTPUT_BASENAME="test"
+          touch $INPUT_FILE
           echo "Submitting new job"
-          SUBMIT_OUTPUT="$(poetry run terralab submit array_imputation --inputs '{"multiSampleVcf": "input_file.vcf.gz", "outputBasename": "$OUTPUT_BASENAME"}' 2>&1)"
+          SUBMIT_OUTPUT="$(poetry run terralab submit array_imputation --inputs '{"multiSampleVcf": "$INPUT_FILE", "outputBasename": "$OUTPUT_BASENAME"}' 2>&1)"
           JOB_ID="$(echo "$SUBMIT_OUTPUT" | tail -n1 | grep -o '[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}')"
           [ -n "$JOB_ID" ] || { echo "Failed to extract job ID"; exit 1; }
           echo "Created job with ID $JOB_ID"
