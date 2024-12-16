@@ -102,7 +102,7 @@ jobs:
           INPUT_FILE: 'input_file.vcf.gz'
           OUTPUT_BASENAME: 'test'
         run: |
-          set -eu
+          set -eux
           
           cd terra-scientific-pipelines-service-cli/
           poetry install
@@ -119,7 +119,7 @@ jobs:
           echo "### RUNNING CLI TEST ###"
           poetry run terralab --debug login-with-oauth "$USER_TOKEN"
 
-          touch $INPUT_FILE
+          touch "$INPUT_FILE"
           echo "Submitting new job"
           SUBMIT_OUTPUT="$(poetry run terralab submit array_imputation --inputs '{"multiSampleVcf": "$INPUT_FILE", "outputBasename": "$OUTPUT_BASENAME"}' 2>&1)"
           JOB_ID="$(echo "$SUBMIT_OUTPUT" | tail -n1 | grep -o '[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}')"
