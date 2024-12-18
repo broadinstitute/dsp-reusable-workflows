@@ -50,7 +50,7 @@ def prepare_imputation_pipeline(teaspoons_url, token):
             "multiSampleVcf": "this/is/a/fake/file.vcf.gz",
             "outputBasename": "fake_basename"
         },
-        "description": f"e2e test run"
+        "description": "e2e test run"
     }
 
     uri = f"{teaspoons_url}/api/pipelineruns/v1/prepare"
