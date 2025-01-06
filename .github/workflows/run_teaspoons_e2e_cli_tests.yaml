@@ -117,6 +117,8 @@ jobs:
           grep TEASPOONS_API_URL "$CONFIG_FILE" || { echo "Failed to update config"; exit 1; }
 
           echo "### RUNNING CLI TEST ###"
+          poetry run terralab --version
+          poetry run terralab --debug --version
           poetry run terralab --debug login-with-oauth "$USER_TOKEN"
 
           touch "$INPUT_FILE"
