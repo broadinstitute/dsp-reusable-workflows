@@ -102,7 +102,7 @@ jobs:
           INPUT_FILE: 'input_file.vcf.gz'
           OUTPUT_BASENAME: 'test'
         run: |
-          set -eu
+          set -eux
           
           cd terra-scientific-pipelines-service-cli/
           poetry install
