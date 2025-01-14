@@ -67,7 +67,7 @@ else:
     firecloud_orch_url = f"https://firecloud-orchestration.{env_string}"
 
 empty_wdl_tag_or_branch = "0.1.23"  # teaspoons repo
-real_wdl_tag_or_branch = "ImputationBeagle_development_v0.0.2"  # warp repo
+real_wdl_tag_or_branch = "ImputationBeagle_development_v0.0.3"  # warp repo
 
 # configure logging format
 LOG_FORMAT = "%(asctime)s %(levelname)-8s %(message)s"
@@ -173,9 +173,9 @@ if use_empty_wdl:
 else:
     tag_or_branch = real_wdl_tag_or_branch
     method_definition_dict = {
-        "methodUri": f"dockstore://github.com%2Fbroadinstitute%2Fwarp%2FQuotaConsumed/{tag_or_branch}",
+        "methodUri": f"dockstore://github.com%2Fbroadinstitute%2Fwarp%2FArrayImputationQuotaConsumed/{tag_or_branch}",
         "sourceRepo": "dockstore",
-        "methodPath": "github.com/broadinstitute/warp/QuotaConsumed",
+        "methodPath": "github.com/broadinstitute/warp/ArrayImputationQuotaConsumed",
         "methodVersion": tag_or_branch
     }
 
