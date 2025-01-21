@@ -4,20 +4,17 @@ import logging
 import sys
 import os
  
-# getting the name of the directory
-# where this file is present.
+# get the name of the directory where this file is present.
 current = os.path.dirname(os.path.realpath(__file__))
  
-# Getting the parent directory name
-# where the current directory is present.
+# get the parent directory name where the current directory is present.
 grandparent = os.path.dirname(os.path.dirname(current))
  
-# adding the parent directory to 
-# the sys.path.
+# add the parent directory to the sys.path.
 sys.path.append(grandparent)
  
-# importing
-from workspace_helper import create_gcp_workspace, share_workspace_grant_owner, add_wdl_to_gcp_workspace
+# import
+from workspace_helper import create_gcp_workspace, share_workspace_grant_owner, add_wdl_to_gcp_workspace, set_workspace_bucket_ttl
 
 
 if __name__ == "__main__":
@@ -26,6 +23,7 @@ if __name__ == "__main__":
         help='token for user to authenticate Terra API calls')
     parser.add_argument('-m', '--teaspoons-sa-email', required=False,
         help='email of teaspoons service account to share workspace/billing project with')
+    parser.add_argument('--wdl-tag-or-branch', required=True, help='github reference (tag or branch) to use for source wdls')
     parser.add_argument('--use-empty-wdl', action='store_true',
         help='whether to import the empty ImputationBeagleEmpty wdl for testing; if not set, defaults to the real ImputationBeagle wdl')
     parser.add_argument('-e', '--env', required=False, default='dev',
@@ -66,8 +64,7 @@ if is_bee:
 else:
     firecloud_orch_url = f"https://firecloud-orchestration.{env_string}"
 
-empty_wdl_tag_or_branch = "0.1.23"  # teaspoons repo
-real_wdl_tag_or_branch = "ImputationBeagle_development_v0.0.2"  # warp repo
+wdl_tag_or_branch = args.wdl_tag_or_branch
 
 # configure logging format
 LOG_FORMAT = "%(asctime)s %(levelname)-8s %(message)s"
@@ -129,6 +126,11 @@ if emails_to_share_with:
         logging.info(f"sharing workspace wtih {email_to_share_with}")
         share_workspace_grant_owner(firecloud_orch_url, billing_project_name, workspace_name, email_to_share_with, user_token)
 
+# set TTL on files in submissions directory of workspace bucket
+ttl_days = 14  # delete after 2 weeks
+matches_prefix_list = ["submissions/", "user-input-files/"]
+set_workspace_bucket_ttl(rawls_url, billing_project_name, workspace_name, ttl_days, matches_prefix_list, user_token)
+
 # import methods
 wdl_namespace = billing_project_name
 root_entity_type = "array_imputation"
@@ -138,20 +140,18 @@ use_empty_wdl = args.use_empty_wdl
 wdl_name = "ImputationBeagle"
 
 if use_empty_wdl:
-    tag_or_branch = empty_wdl_tag_or_branch
     method_definition_dict = {
-        "methodUri": f"dockstore://github.com%2FDataBiosphere%2Fterra-scientific-pipelines-service%2FImputationBeagleEmpty/{tag_or_branch}",
+        "methodUri": f"dockstore://github.com%2FDataBiosphere%2Fterra-scientific-pipelines-service%2FImputationBeagleEmpty/{wdl_tag_or_branch}",
         "sourceRepo": "dockstore",
         "methodPath": "github.com/DataBiosphere/terra-scientific-pipelines-service/ImputationBeagleEmpty",
-        "methodVersion": tag_or_branch
+        "methodVersion": wdl_tag_or_branch
     }
 else:
-    tag_or_branch = real_wdl_tag_or_branch
     method_definition_dict = {
-        "methodUri": f"dockstore://github.com%2Fbroadinstitute%2Fwarp%2FImputationBeagle/{tag_or_branch}",
+        "methodUri": f"dockstore://github.com%2Fbroadinstitute%2Fwarp%2FImputationBeagle/{wdl_tag_or_branch}",
         "sourceRepo": "dockstore",
         "methodPath": "github.com/broadinstitute/warp/ImputationBeagle",
-        "methodVersion": tag_or_branch
+        "methodVersion": wdl_tag_or_branch
     }
 
 logging.info(f"Adding \"{wdl_name}\" ({method_definition_dict['methodPath']}) to workspace")
@@ -163,20 +163,18 @@ wdl_name = "QuotaConsumed"
 
 use_empty_wdl = args.use_empty_wdl
 if use_empty_wdl:
-    tag_or_branch = empty_wdl_tag_or_branch
     method_definition_dict = {
-        "methodUri": f"dockstore://github.com%2FDataBiosphere%2Fterra-scientific-pipelines-service%2FQuotaConsumedEmpty/{tag_or_branch}",
+        "methodUri": f"dockstore://github.com%2FDataBiosphere%2Fterra-scientific-pipelines-service%2FQuotaConsumedEmpty/{wdl_tag_or_branch}",
         "sourceRepo": "dockstore",
         "methodPath": "github.com/DataBiosphere/terra-scientific-pipelines-service/QuotaConsumedEmpty",
-        "methodVersion": tag_or_branch
+        "methodVersion": wdl_tag_or_branch
     }
 else:
-    tag_or_branch = real_wdl_tag_or_branch
     method_definition_dict = {
-        "methodUri": f"dockstore://github.com%2Fbroadinstitute%2Fwarp%2FQuotaConsumed/{tag_or_branch}",
+        "methodUri": f"dockstore://github.com%2Fbroadinstitute%2Fwarp%2FArrayImputationQuotaConsumed/{wdl_tag_or_branch}",
         "sourceRepo": "dockstore",
-        "methodPath": "github.com/broadinstitute/warp/QuotaConsumed",
-        "methodVersion": tag_or_branch
+        "methodPath": "github.com/broadinstitute/warp/ArrayImputationQuotaConsumed",
+        "methodVersion": wdl_tag_or_branch
     }
 
 logging.info(f"Adding \"{wdl_name}\" ({method_definition_dict['methodPath']}) to workspace")

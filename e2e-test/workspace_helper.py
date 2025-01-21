@@ -227,3 +227,45 @@ def add_wdl_to_gcp_workspace(billing_project_name, workspace_name, wdl_namespace
         raise(Exception(response.text))
     
     logging.info(f"Successfully added wdl method config {wdl_namespace}/{wdl_name} to workspace {billing_project_name}/{workspace_name}")
+
+
+# SET WORKSPACE BUCKET TTL ACTION
+def set_workspace_bucket_ttl(rawls_url, billing_project_name, workspace_name, ttl_days, matches_prefix_list, token):
+    """Calls Rawls to set a TTL for a certain number of days (ttl_days) on a specified set of object prefixes (matches_prefix_list).
+    To set the TTL on all objects in the bucket, specify an empty list for matches_prefix_list.
+    Common values to include in the list of prefixes are:
+      - "submissions/"
+      - "submissions/intermediates/"
+      - "submissions/final-outputs/"
+    """
+    uri = f"{rawls_url}/api/workspaces/v2/{billing_project_name}/{workspace_name}/settings"
+    request_body = [
+        {
+            "settingType": "GcpBucketLifecycle",
+            "config": {
+                "rules": [
+                    {
+                        "action": {
+                            "actionType": "Delete"
+                        },
+                        "conditions": {
+                            "age": ttl_days,
+                            "matchesPrefix": matches_prefix_list
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    response = requests.put(uri, json=request_body, headers=headers)
+    status_code = response.status_code
+
+    if status_code != 200:
+        raise(Exception(response.text))
+    
+    logging.info(f"Successfully set a TTL of {ttl_days} days on objects with prefixes {matches_prefix_list} in workspace {billing_project_name}/{workspace_name}")
