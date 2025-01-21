@@ -128,7 +128,7 @@ if emails_to_share_with:
 
 # set TTL on files in submissions directory of workspace bucket
 ttl_days = 14  # delete after 2 weeks
-matches_prefix_list = ["submissions/"]
+matches_prefix_list = ["submissions/", "user-input-files/"]
 set_workspace_bucket_ttl(rawls_url, billing_project_name, workspace_name, ttl_days, matches_prefix_list, user_token)
 
 # import methods
