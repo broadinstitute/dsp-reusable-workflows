@@ -3,7 +3,7 @@ from helper import create_gcp_billing_project, delete_gcp_billing_project
 from teaspoons_helper import (
     create_and_populate_terra_group, update_imputation_pipeline_workspace, query_for_user_quota_consumed, 
     prepare_imputation_pipeline, upload_file_with_signed_url, start_imputation_pipeline, poll_for_imputation_job,
-    download_with_signed_url
+    download_with_signed_url, ping_until_200_with_timeout
 )
 
 import os
@@ -29,6 +29,7 @@ workspace_name = ""
 rawls_url = f"https://rawls.{env_string}"
 firecloud_orch_url = f"https://firecloudorch.{env_string}"
 teaspoons_url = f"https://teaspoons.{env_string}"
+sam_url = f"https://sam.{env_string}"
 
 wdl_method_version = os.environ.get("WDL_METHOD_VERSION")
 
@@ -47,6 +48,10 @@ found_exception = False
 try:
     logging.info("Starting Teaspoons GCP E2E test...")
     logging.info(f"billing project: {billing_project_name}, env_string: {env_string}")
+
+    logging.info(f"checking if Sam is pingable")
+    ping_until_200_with_timeout(f"{sam_url}/liveness", 300)
+    ping_until_200_with_timeout(f"{sam_url}/status", 300)
 
     # Create Terra billing project
     logging.info("Creating billing project...")

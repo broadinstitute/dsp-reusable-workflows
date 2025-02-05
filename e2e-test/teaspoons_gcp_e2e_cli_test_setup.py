@@ -1,6 +1,6 @@
 from workspace_helper import create_gcp_workspace, delete_workspace, share_workspace_grant_owner, add_wdl_to_gcp_workspace
 from helper import create_gcp_billing_project, delete_gcp_billing_project
-from teaspoons_helper import create_and_populate_terra_group, update_imputation_pipeline_workspace
+from teaspoons_helper import create_and_populate_terra_group, update_imputation_pipeline_workspace, ping_until_200_with_timeout
 
 import os
 import logging
@@ -23,6 +23,7 @@ workspace_name = os.environ.get("WORKSPACE_NAME")
 rawls_url = f"https://rawls.{env_string}"
 firecloud_orch_url = f"https://firecloudorch.{env_string}"
 teaspoons_url = f"https://teaspoons.{env_string}"
+sam_url = f"https://sam.{env_string}"
 
 wdl_method_version = os.environ.get("WDL_METHOD_VERSION")
 
@@ -40,6 +41,10 @@ logging.basicConfig(
 try:
     logging.info("Starting Teaspoons GCP E2E test...")
     logging.info(f"billing project: {billing_project_name}, env_string: {env_string}")
+
+    logging.info(f"checking if Sam is pingable")
+    ping_until_200_with_timeout(f"{sam_url}/liveness", 300)
+    ping_until_200_with_timeout(f"{sam_url}/status", 300)
 
     # Create Terra billing project
     logging.info("Creating billing project...")
