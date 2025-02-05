@@ -233,3 +233,18 @@ def add_member_to_terra_group(orch_url, group_name, email_address, role, token):
         raise Exception(response.text)
     
     logging.info(f"added {email_address} as {role} to Terra group {group_name}")
+
+
+# sometimes we want to check if a service is pingable before running our e2e test due to some transient
+# issues we've been seeing.
+def ping_until_200_with_timeout(url, timeout_seconds=300):
+    start_time = time.time()
+    while time.time() - start_time < timeout_seconds:
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                return
+        except requests.exceptions.ConnectionError:
+            logging.warning(f"URL {url} not reachable")
+        time.sleep(30)
+    raise Exception(f"Timed out waiting for {url} to return 200")
