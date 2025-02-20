@@ -22,7 +22,7 @@ def update_imputation_pipeline_workspace(teaspoons_url, workspace_project, works
     request_body = {
         "workspaceBillingProject": workspace_project,
         "workspaceName": workspace_name,
-        "wdlMethodVersion": wdl_method_version
+        "toolVersion": wdl_method_version
     }
 
     uri = f"{teaspoons_url}/api/admin/v1/pipelines/array_imputation/0"
@@ -38,7 +38,7 @@ def update_imputation_pipeline_workspace(teaspoons_url, workspace_project, works
     if status_code != 200:
         raise Exception(response.text)
 
-    logging.info(f"successfully updated imputation pipeline workspace and wdl method version to: {workspace_project}, {workspace_name}, {wdl_method_version}")
+    logging.info(f"successfully updated imputation pipeline workspace and tool version to: {workspace_project}, {workspace_name}, {wdl_method_version}")
 
 
 def prepare_imputation_pipeline(teaspoons_url, token):
