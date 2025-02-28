@@ -6,9 +6,10 @@ authors = ["lmcnatt <85642387+lucymcnatt@users.noreply.github.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.10"
 google-cloud-bigquery = "^3.29.0"
 requests = "^2.32.3"
+click = "^8.1.8"
 
 
 [build-system]

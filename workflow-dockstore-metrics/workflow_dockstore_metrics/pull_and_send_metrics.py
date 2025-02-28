@@ -16,7 +16,11 @@ from google.oauth2 import service_account
 import requests
 import logging
 import os
-import argparse
+import click
+from queries import WORKFLOW_DATA_QUERY, INSERT_UPDATED_METRICS_QUERY
+import datetime
+import configparser
+import ast
 
 # configure logging format
 LOG_FORMAT = "%(asctime)s %(levelname)-8s %(message)s"
@@ -28,26 +32,10 @@ logging.basicConfig(
     datefmt=LOG_DATEFORMAT,
 )
 
-WORKFLOW_DATA_QUERY = '''
-WITH workflow_runtime_info AS ( 
-  SELECT  WORKFLOW_EXECUTION_UUID AS workflow_id, 
-          ARRAY_AGG(IF(METADATA_KEY = "status", METADATA_VALUE, NULL) IGNORE NULLS ORDER BY METADATA_TIMESTAMP DESC)[offset(0)] AS status, 
-          TIMESTAMP(ARRAY_AGG(IF(METADATA_KEY = "start", METADATA_VALUE, NULL) IGNORE NULLS ORDER BY METADATA_TIMESTAMP DESC)[offset(0)]) AS workflow_start, 
-          TIMESTAMP(ARRAY_AGG(IF(METADATA_KEY = "end", METADATA_VALUE, NULL) IGNORE NULLS ORDER BY METADATA_TIMESTAMP DESC)[offset(0)]) AS workflow_end, 
-          ARRAY_AGG(IF(METADATA_KEY = "submittedFiles:workflowUrl", METADATA_VALUE, null) IGNORE NULLS)[offset(0)] AS source_url 
-  FROM `broad-dsde-prod-analytics-dev.warehouse.cromwell_metadata` as metadata
-  LEFT JOIN `broad-dsde-prod-analytics-dev.warehouse.cromwell_metadata_sent_to_dockstore` as sent on metadata.WORKFLOW_EXECUTION_UUID = sent.WORKFLOW_EXECUTION_ID
-  WHERE METADATA_TIMESTAMP > DATETIME_SUB(CURRENT_TIMESTAMP(), INTERVAL 2 DAY) and sent.WORKFLOW_EXECUTION_ID IS NULL
-  GROUP BY WORKFLOW_EXECUTION_UUID
-  HAVING STATUS != "Running"
-) 
-SELECT workflow_id, status, workflow_start, workflow_end, TIMESTAMP_DIFF(workflow_end, workflow_start, SECOND) AS workflow_runtime_time, source_url 
-FROM workflow_runtime_info
-WHERE source_url IS NOT NULL
-ORDER BY source_url;
-'''
-
 class ExecutionData:
+    ''''
+    Class to store execution data for a single workflow run
+    '''
     def __init__(self, query_row: bigquery.table.Row):
         self.workflow_id = query_row.workflow_id
         self.date_executed = query_row.workflow_start
@@ -58,6 +46,9 @@ class ExecutionData:
 
 
 class WorkflowData:
+    ''''
+    Class to store workflow data on the version level, and send it to dockstore
+    '''
 
     def __init__(self, query_row: bigquery.table.Row):
         self.source_url = query_row.source_url
@@ -70,7 +61,7 @@ class WorkflowData:
     def add_execution(self, execution: ExecutionData):
         self.workflow_executions.append(execution)
 
-    def send_metrics(self, test: bool):
+    def send_metrics(self, test: bool, dockstore_url: str, dockstore_headers: dict):
 
         formatted_executions = ""
         for execution in self.workflow_executions:
@@ -89,17 +80,13 @@ class WorkflowData:
             ],
         }}
         '''
-        uri = f"https://dockstore.org/api/api/ga4gh/v2/extended/{self.source_url}/versions/{self.version}/executions?platform=TERRA"
-        headers = {
-            "accept": "application/json",
-            "Content-Type": "application/json"
-        }
+        uri = f"{dockstore_url}{self.source_url}/versions/{self.version}/executions?platform=TERRA"
 
         if test:
             logging.info(f"[TEST MODE] Dockstore request: {json_request_body}")
             status_code = 200
         else:
-            response = requests.put(uri, json=json_request_body, headers=headers)
+            response = requests.put(uri, json=json_request_body, headers=dockstore_headers)
             status_code = response.status_code
 
         if status_code != 200:
@@ -110,26 +97,46 @@ class WorkflowData:
 
 
 def update_metadata_table(client, workflow_ids: list[str], test: bool):
-    update_query = f'''
-      INSERT INTO `broad-dsde-prod-analytics-dev.warehouse.cromwell_metadata_sent_to_dockstore` (WORKFLOW_EXECUTION_ID) 
-       VALUES 
-       ('{"'), ('".join(workflow_ids)}');
-'''
+    timestamp_datetime = datetime.datetime.now().timestamp()
+    values = f"', {timestamp_datetime}), ('".join(workflow_ids)
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("values", "STRING", values)
+        ]
+    )
     if test:
-        logging.info(f"[TEST MODE] Query to update metadata table: {update_query}")
+        logging.info(f"[TEST MODE] Values to insert to cromwell_metadata_sent_to_dockstore table: {values}")
     else:
-        query_job = client.query(update_query)  # API request
+        query_job = client.query(INSERT_UPDATED_METRICS_QUERY, job_config)  # API request
         query_result = query_job.result()  # Waits for query to finish
         logging.info(f"Query to update metadata table modified {query_result.num_dml_affected_rows} rows.")
 
-# Perform a query.
-def get_and_send_workflow_data(client: bigquery.Client, test: bool):
-    query_job = client.query(WORKFLOW_DATA_QUERY)
+def get_and_send_workflow_data(client: bigquery.Client, dry_run: bool, lookback_window: int, config_parser: configparser.ConfigParser) -> list[str]:
+    '''
+    Query BigQuery for workflow execution data, send it to dockstore, and keep track of whether the metrics were sent
+    Note: Sends metrics for all executions of a workflow version at once
+
+    :param client: BigQuery client, intialized with the project
+    :param test: whether to run in test mode or actually send the metrics to dockstore
+    :param lookback_window: How many days of metadata to retrieve
+    :param config_parser: ConfigParser object with the dockstore settings
+    :return: List of workflow_ids that were successfully sent to dockstore
+    '''
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("lookback_window", "INT64", lookback_window)
+        ]
+    )
+    query_job = client.query(WORKFLOW_DATA_QUERY, job_config)
     rows = query_job.result()
     success_count = 0
     updated_workflows = []
 
     logging.info(f"Total workflow executions to upload: {rows.total_rows}")
+
+    # get dockstore settings from config file
+    dockstore_url = config_parser.get('Dockstore', 'url')
+    dockstore_headers = ast.literal_eval(config_parser.get('Dockstore', 'headers'))
 
     current_workflow = None
 
@@ -142,7 +149,7 @@ def get_and_send_workflow_data(client: bigquery.Client, test: bool):
             current_workflow.add_execution(ExecutionData(row))
         # new sourceURL, so send execution metrics for the previous workflow and reset current workflow
         else:
-            current_workflow.send_metrics(test)
+            current_workflow.send_metrics(dry_run, dockstore_url, dockstore_headers)
             # if dockstore PUT is successful, add to the list of workflows to update in the metadata table
             if current_workflow.sent_metric:
                 success_count += len(current_workflow.workflow_executions)
@@ -152,7 +159,7 @@ def get_and_send_workflow_data(client: bigquery.Client, test: bool):
             current_workflow = WorkflowData(row)
 
     # send metrics for the last workflow
-    current_workflow.send_metrics(test)
+    current_workflow.send_metrics(dry_run)
     if current_workflow.sent_metric:
         success_count += len(current_workflow.workflow_executions)
         workflow_ids = [execution.workflow_id for execution in current_workflow.workflow_executions]
@@ -163,18 +170,21 @@ def get_and_send_workflow_data(client: bigquery.Client, test: bool):
     logging.info(f"Successfully sent {success_count}/{rows.total_rows} workflow metrics to dockstore: {success_rate}%")
     return updated_workflows
 
-def main(test: bool, login: bool):
+# configure click args
+@click.command()
+@click.option('--dry_run', is_flag=True, help='Perform a dry run, will print any requests that alter data instead of sending them')
+@click.option('--login', is_flag=True, help='Re-authenticate with gcloud')
+@click.option('--lookback_window', default=2, help='Lookback window for querying metadata table, in days')
+def main(dry_run: bool, login: bool, lookback_window: int):
+    config_parser = configparser.ConfigParser()
+    config_parser.read('config.ini')
     if login:
         os.system("gcloud auth application-default login")
-    client = bigquery.Client(project="broad-dsde-prod-analytics-dev")
-    successfully_sent_workflows = get_and_send_workflow_data(client, test)
-    update_metadata_table(client, successfully_sent_workflows, test)
+    client = bigquery.Client(project=config_parser.get('General', 'bigQuery_project_id'))
+    successfully_sent_workflows = get_and_send_workflow_data(client, dry_run, lookback_window, config_parser)
+    update_metadata_table(client, successfully_sent_workflows, dry_run)
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Sends workflow metrics to Dockstore')
-    parser.add_argument('-t', '--test', action='store_true', help='Run in test mode')
-    parser.add_argument('-l', '--login', action='store_true', help='Re-authenticate with gcloud')
-    args = parser.parse_args()
-    main(args.test, args.login)
+    main()
 
