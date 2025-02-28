@@ -48,7 +48,7 @@ ORDER BY source_url;
 '''
 
 UPDATE_QUERY = f'''
-    UPDATE `broad-dsde-prod-analytics-dev.warehouse.cromwell_metadata` set sent_to_dockstore = True where WORKFLOW_EXECUTION_UUID in ('{"', '".join(workflow_ids)});
+    UPDATE `broad-dsde-prod-analytics-dev.warehouse.cromwell_metadata` set SENT_TO_DOCKSTORE = True where WORKFLOW_EXECUTION_UUID in ('{"', '".join(workflow_ids)});
 '''
 
 class ExecutionData:
