@@ -37,14 +37,14 @@ WITH workflow_runtime_info AS (
           ARRAY_AGG(IF(METADATA_KEY = "submittedFiles:workflowUrl", METADATA_VALUE, null) IGNORE NULLS)[offset(0)] AS source_url 
   FROM `broad-dsde-prod-analytics-dev.warehouse.cromwell_metadata` 
   WHERE METADATA_TIMESTAMP > DATETIME_SUB(CURRENT_TIMESTAMP(), INTERVAL 2 DAY)
+  --WHERE SENT_TO_DOCKSTORE IS NULL
   GROUP BY WORKFLOW_EXECUTION_UUID
   HAVING STATUS != "Running"
 ) 
 SELECT workflow_id, status, workflow_start, workflow_end, TIMESTAMP_DIFF(workflow_end, workflow_start, SECOND) AS workflow_runtime_time, source_url 
 FROM workflow_runtime_info
 WHERE source_url IS NOT NULL
-ORDER BY source_url
-LIMIT 10;
+ORDER BY source_url;
 '''
 
 UPDATE_QUERY = f'''
