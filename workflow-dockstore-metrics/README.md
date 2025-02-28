@@ -3,7 +3,7 @@ It then updates the metadata table to indicate that the data has been sent to Do
 
 Requires:
 - signing into a firecloud account with access to the `broad-dsde-prod-analytics-dev` project
-- activating the associated poetry env with `poetry shell`, then poetry install
+- activating a poetry env, then `poetry install` to install dependencies
 
 Args:
 -t --test: Run in test mode. Does not send metrics to dockstore or update the metadata table.
