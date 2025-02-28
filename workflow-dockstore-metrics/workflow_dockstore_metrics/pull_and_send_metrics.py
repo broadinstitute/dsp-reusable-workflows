@@ -111,7 +111,7 @@ class WorkflowData:
 
 def update_metadata_table(client, workflow_ids: list[str], test: bool):
     update_query = f'''
-      INSERT INTO `broad-dsde-prod-analytics-dev.warehouse.cromwell_metadata_sent_to_dockstore` (WORKFLOW_EXECUTION_UUID) 
+      INSERT INTO `broad-dsde-prod-analytics-dev.warehouse.cromwell_metadata_sent_to_dockstore` (WORKFLOW_EXECUTION_ID) 
        VALUES 
        ('{"'), ('".join(workflow_ids)}');
 '''
@@ -166,10 +166,9 @@ def get_and_send_workflow_data(client: bigquery.Client, test: bool):
 def main(test: bool, login: bool):
     if login:
         os.system("gcloud auth application-default login")
-    # client = bigquery.Client(project="broad-dsde-prod-analytics-dev")
-    # successfully_sent_workflows = get_and_send_workflow_data(client, test)
-    successfully_sent_workflows = ["test_workflow_id1", "test_workflow_id2", "test_workflow_id3"]
-    update_metadata_table(successfully_sent_workflows, test)
+    client = bigquery.Client(project="broad-dsde-prod-analytics-dev")
+    successfully_sent_workflows = get_and_send_workflow_data(client, test)
+    update_metadata_table(client, successfully_sent_workflows, test)
 
 
 if __name__ == '__main__':
