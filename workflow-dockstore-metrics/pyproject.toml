@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "workflow-dockstore-metrics"
+version = "0.1.0"
+description = ""
+authors = ["lmcnatt <85642387+lucymcnatt@users.noreply.github.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+google-cloud-bigquery = "^3.29.0"
+requests = "^2.32.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
