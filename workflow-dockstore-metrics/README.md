@@ -1,4 +1,4 @@
-The `pull_data.py` script pulls workflow execution data from BigQuery and sends it to Dockstore.
+The `pull_and_send_metrics.py` script pulls workflow execution data from BigQuery and sends it to Dockstore.
 It then updates the metadata table to indicate that the data has been sent to Dockstore.
 
 Requires:
@@ -10,4 +10,4 @@ Args:
 -l --login: Re-authenticate with gcloud
 
 Example usage:
-`python workflow_dockstore_metrics/pull_data.py -t -l`
+`python workflow_dockstore_metrics/pull_and_send_metrics.py -t -l`

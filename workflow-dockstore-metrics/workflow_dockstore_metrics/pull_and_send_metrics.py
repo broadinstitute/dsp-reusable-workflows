@@ -47,10 +47,6 @@ WHERE source_url IS NOT NULL
 ORDER BY source_url;
 '''
 
-UPDATE_QUERY = f'''
-    UPDATE `broad-dsde-prod-analytics-dev.warehouse.cromwell_metadata` set SENT_TO_DOCKSTORE = True where WORKFLOW_EXECUTION_UUID in ('{"', '".join(workflow_ids)});
-'''
-
 class ExecutionData:
     def __init__(self, query_row: bigquery.table.Row):
         self.workflow_id = query_row.workflow_id
@@ -95,7 +91,6 @@ class WorkflowData:
         '''
         uri = f"https://dockstore.org/api/api/ga4gh/v2/extended/{self.source_url}/versions/{self.version}/executions?platform=TERRA"
         headers = {
-            # "Authorization": f"Bearer {token}",
             "accept": "application/json",
             "Content-Type": "application/json"
         }
@@ -115,7 +110,10 @@ class WorkflowData:
 
 
 def update_metadata_table(client, workflow_ids: list[str]):
-    query_job = client.query(UPDATE_QUERY)  # API request
+    update_query = f'''
+    UPDATE `broad-dsde-prod-analytics-dev.warehouse.cromwell_metadata` set SENT_TO_DOCKSTORE = True where WORKFLOW_EXECUTION_UUID in ('{"', '".join(workflow_ids)});
+'''
+    query_job = client.query(update_query)  # API request
     query_result = query_job.result()  # Waits for query to finish
     logging.info(f"Query to update metadata table modified {query_result.num_dml_affected_rows} rows.")
 
