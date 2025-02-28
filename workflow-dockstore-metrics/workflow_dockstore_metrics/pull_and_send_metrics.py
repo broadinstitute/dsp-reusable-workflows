@@ -35,9 +35,9 @@ WITH workflow_runtime_info AS (
           TIMESTAMP(ARRAY_AGG(IF(METADATA_KEY = "start", METADATA_VALUE, NULL) IGNORE NULLS ORDER BY METADATA_TIMESTAMP DESC)[offset(0)]) AS workflow_start, 
           TIMESTAMP(ARRAY_AGG(IF(METADATA_KEY = "end", METADATA_VALUE, NULL) IGNORE NULLS ORDER BY METADATA_TIMESTAMP DESC)[offset(0)]) AS workflow_end, 
           ARRAY_AGG(IF(METADATA_KEY = "submittedFiles:workflowUrl", METADATA_VALUE, null) IGNORE NULLS)[offset(0)] AS source_url 
-  FROM `broad-dsde-prod-analytics-dev.warehouse.cromwell_metadata` 
-  WHERE METADATA_TIMESTAMP > DATETIME_SUB(CURRENT_TIMESTAMP(), INTERVAL 2 DAY)
-  --WHERE SENT_TO_DOCKSTORE IS NULL
+  FROM `broad-dsde-prod-analytics-dev.warehouse.cromwell_metadata` as metadata
+  LEFT JOIN `broad-dsde-prod-analytics-dev.warehouse.cromwell_metadata_sent_to_dockstore` as sent on metadata.WORKFLOW_EXECUTION_UUID = sent.WORKFLOW_EXECUTION_ID
+  WHERE METADATA_TIMESTAMP > DATETIME_SUB(CURRENT_TIMESTAMP(), INTERVAL 2 DAY) and sent.WORKFLOW_EXECUTION_ID IS NULL
   GROUP BY WORKFLOW_EXECUTION_UUID
   HAVING STATUS != "Running"
 ) 
@@ -109,13 +109,18 @@ class WorkflowData:
             self.sent_metric = True
 
 
-def update_metadata_table(client, workflow_ids: list[str]):
+def update_metadata_table(client, workflow_ids: list[str], test: bool):
     update_query = f'''
-    UPDATE `broad-dsde-prod-analytics-dev.warehouse.cromwell_metadata` set SENT_TO_DOCKSTORE = True where WORKFLOW_EXECUTION_UUID in ('{"', '".join(workflow_ids)});
+      INSERT INTO `broad-dsde-prod-analytics-dev.warehouse.cromwell_metadata_sent_to_dockstore` (WORKFLOW_EXECUTION_UUID) 
+       VALUES 
+       ('{"'), ('".join(workflow_ids)}');
 '''
-    query_job = client.query(update_query)  # API request
-    query_result = query_job.result()  # Waits for query to finish
-    logging.info(f"Query to update metadata table modified {query_result.num_dml_affected_rows} rows.")
+    if test:
+        logging.info(f"[TEST MODE] Query to update metadata table: {update_query}")
+    else:
+        query_job = client.query(update_query)  # API request
+        query_result = query_job.result()  # Waits for query to finish
+        logging.info(f"Query to update metadata table modified {query_result.num_dml_affected_rows} rows.")
 
 # Perform a query.
 def get_and_send_workflow_data(client: bigquery.Client, test: bool):
@@ -161,12 +166,10 @@ def get_and_send_workflow_data(client: bigquery.Client, test: bool):
 def main(test: bool, login: bool):
     if login:
         os.system("gcloud auth application-default login")
-    client = bigquery.Client(project="broad-dsde-prod-analytics-dev")
-    successfully_sent_workflows = get_and_send_workflow_data(client, test)
-    if not test:
-        update_metadata_table(successfully_sent_workflows)
-    else:
-        logging.info("[TEST MODE] No updates to metadata table")
+    # client = bigquery.Client(project="broad-dsde-prod-analytics-dev")
+    # successfully_sent_workflows = get_and_send_workflow_data(client, test)
+    successfully_sent_workflows = ["test_workflow_id1", "test_workflow_id2", "test_workflow_id3"]
+    update_metadata_table(successfully_sent_workflows, test)
 
 
 if __name__ == '__main__':
