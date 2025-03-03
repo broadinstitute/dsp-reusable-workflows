@@ -1,0 +1,308 @@
+name: run-swat-tests
+description: 'Run tests'
+inputs:
+  bee_name:
+    description: 'The BEE host'
+    required: true
+  service_repo:
+    description: 'The target app service repo to run integration tests (sam, firecloud-orchestration, leonardo, rawls)'
+    required: true
+    default: ''
+  ref:
+    description: 'The branch, tag or SHA to checkout'
+    required: false
+    default: ''
+  broadbot_token:
+    description: 'The BROADBOT token'
+    required: true
+  firecloud-json-key-b64:
+    description: 'Firecloud SA that test users impersonate'
+    required: true
+  rawls-json-key-b64:
+    description: 'Rawls SA that Sam tests depend on. Sam tests that depend on this SA should be a) removed, or b) refactored, or c) moved to rawls repo for independent releases.'
+    required: false
+    default: ''
+  trial-billing-json-key-b64:
+    description: 'Trial billing SA json key'
+    required: true
+  sam-firestore-json-key-b64:
+    description: 'Sam firecloud store SA json key'
+    required: false
+    default: ''
+  firecloud-users-b64:
+    description: 'Firecloud users secrets'
+    required: true
+  firecloud-secrets-b64:
+    description: 'Firecloud secrets'
+    required: true
+  test-group-name:
+    description: 'optional test group name'
+    required: false
+    default: ''
+  sbt-test-command:
+    description: 'Sbt test command'
+    required: true
+    default: ''
+  sbt-test-project:
+    description: 'Project name of tests. Default is root project'
+    required: false
+    default: ''
+  test_run_id:
+    description: 'Test Run ID'
+    required: false
+    default: ''
+  test_env:
+    description: 'Test ENV'
+    required: false
+    default: ''
+  build_id:
+    description: 'Build ID'
+    required: false
+    default: ''
+  java_version:
+    description: 'Java version'
+    required: false
+    default: '17'
+  e2e_env:
+    description: 'The name of a .env file that contains envvars for E2E tests'
+    required: false
+    default: false
+  billing_project:
+    description: 'Billing Project for E2E testing'
+    required: false
+  users-metadata-b64:
+    description: 'Users metadata JSON encoded in base64'
+    required: false
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: mask input secrets
+      shell: bash
+      run: |
+        echo "::add-mask::${{ inputs.broadbot_token }}"
+        echo "::add-mask::${{ inputs.firecloud-json-key-b64 }}"
+        echo "::add-mask::${{ inputs.rawls-json-key-b64 }}"
+        echo "::add-mask::${{ inputs.trial-billing-json-key-b64 }}"
+        echo "::add-mask::${{ inputs.sam-firestore-json-key-b64 }}"
+        echo "::add-mask::${{ inputs.firecloud-users-b64 }}"
+        echo "::add-mask::${{ inputs.firecloud-secrets-b64 }}"
+        if [[ -n "${{ inputs.users-metadata-b64 }}" ]]; then
+          echo "::add-mask::${{ inputs.users-metadata-b64 }}"
+        fi
+
+    - uses: actions/checkout@v4
+      name: Checkout app service repo given ref
+      if: ${{ (inputs.ref != '') }}
+      with:
+        repository: broadinstitute/${{ inputs.service_repo }}
+        ref: ${{ inputs.ref }}
+        token: ${{ inputs.broadbot_token }}
+        path: ${{ inputs.service_repo }}
+
+    - uses: actions/checkout@v4
+      name: Checkout app service repo default branch
+      if: ${{ (inputs.ref == '') }}
+      with:
+        repository: broadinstitute/${{ inputs.service_repo }}
+        token: ${{ inputs.broadbot_token }}
+        path: ${{ inputs.service_repo }}
+
+    - uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: ${{ inputs.java_version }}
+        cache: 'sbt'
+
+    - name: Setup envvars
+      run: |
+        echo "SERVICE_REPO_PATH=${GITHUB_WORKSPACE}/${{ inputs.service_repo }}" >> $GITHUB_ENV
+        echo "TEST_PATH=${GITHUB_WORKSPACE}/${{ inputs.service_repo }}/automation" >> $GITHUB_ENV
+        echo "TEST_RESOURCES_PATH=${GITHUB_WORKSPACE}/${{ inputs.service_repo }}/automation/src/test/resources" >> $GITHUB_ENV
+        echo "TEST_RESOURCES_EXTRA_PATH=${GITHUB_WORKSPACE}/${{ inputs.service_repo }}/automation/src/test/resources/extra" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Render .env file for E2E Tests
+      if: ${{ inputs.e2e_env != '' }}
+      run: |
+        echo "######### Render ${{ env.TEST_RESOURCES_PATH }}/${{ inputs.e2e_env }} file #########"
+        mkdir -p ${{ env.TEST_RESOURCES_PATH }}
+        echo "export E2E_ENV=${{ inputs.e2e_env }}" >> ${{ env.TEST_RESOURCES_PATH }}/${{ inputs.e2e_env }}
+        if [[ -n "${{ inputs.billing_project }}" ]]; then
+          echo "export BILLING_PROJECT=${{ inputs.billing_project }}" >> ${{ env.TEST_RESOURCES_PATH }}/${{ inputs.e2e_env }}
+        fi
+        if [[ -n "${{ inputs.users-metadata-b64 }}" ]]; then
+          echo "export USERS_METADATA_B64=${{ inputs.users-metadata-b64 }}" >> ${{ env.TEST_RESOURCES_PATH }}/${{ inputs.e2e_env }}
+        fi
+      shell: bash
+
+    - name: Render configs for tests
+      id: render-configs
+      run: |
+        mkdir -p ${{ env.TEST_RESOURCES_PATH }}
+        mkdir -p ${{ env.TEST_RESOURCES_EXTRA_PATH }}
+
+        printf '%s' ${{ inputs.firecloud-json-key-b64 }} \
+          | base64 --decode > ${{ env.TEST_RESOURCES_PATH }}/firecloud-account.json
+
+        printf '%s' ${{ inputs.firecloud-json-key-b64 }} \
+          | base64 --decode \
+          | jq -r .private_key > ${{ env.TEST_RESOURCES_PATH }}/firecloud-account.pem
+
+        printf '%s' ${{ inputs.trial_billing_json_key }} \
+          | base64 --decode \
+          | jq -r .private_key > ${{ env.TEST_RESOURCES_PATH }}/trial-billing-account.pem
+
+        if [ ! -z "${{ inputs.sam-firestore-json-key-b64 }}" ]; then
+          printf '%s' ${{ inputs.sam-firestore-json-key-b64 }} \
+            | base64 --decode > ${{ env.TEST_RESOURCES_EXTRA_PATH }}/sam-firestore-account.json
+        fi
+
+        cat << EOF > ${{ env.TEST_RESOURCES_PATH }}/users.json
+        {
+          "admins": {
+            "dumbledore": "dumbledore.admin@quality.firecloud.org",
+            "voldemort": "voldemort.admin@quality.firecloud.org"
+          },
+          "owners": {
+            "hermione": "hermione.owner@quality.firecloud.org",
+            "sirius": "sirius.owner@quality.firecloud.org",
+            "tonks": "tonks.owner@quality.firecloud.org"
+          },
+          "curators": {
+            "mcgonagall": "mcgonagall.curator@quality.firecloud.org",
+            "snape": "snape.curator@quality.firecloud.org",
+            "hagrid": "hagrid.curator@quality.firecloud.org",
+            "lupin": "lupin.curator@quality.firecloud.org",
+            "flitwick": "flitwick.curator@quality.firecloud.org"
+          },
+          "authdomains": {
+            "fred": "fred.authdomain@quality.firecloud.org",
+            "george": "george.authdomain@quality.firecloud.org",
+            "bill": "bill.authdomain@quality.firecloud.org",
+            "percy": "percy.authdomain@quality.firecloud.org",
+            "molly": "molly.authdomain@quality.firecloud.org",
+            "arthur": "arthur.authdomain@quality.firecloud.org"
+          },
+          "students": {
+            "harry": "harry.potter@quality.firecloud.org",
+            "ron": "ron.weasley@quality.firecloud.org",
+            "lavender": "lavender.brown@quality.firecloud.org",
+            "cho": "cho.chang@quality.firecloud.org",
+            "oliver": "oliver.wood@quality.firecloud.org",
+            "cedric": "cedric.diggory@quality.firecloud.org",
+            "crabbe": "vincent.crabbe@quality.firecloud.org",
+            "goyle": "gregory.goyle@quality.firecloud.org",
+            "dean": "dean.thomas@quality.firecloud.org",
+            "ginny": "ginny.weasley@quality.firecloud.org"
+          },
+          "temps": {
+            "luna": "luna.temp@quality.firecloud.org",
+            "neville": "neville.temp@quality.firecloud.org"
+          },
+          "notebookswhitelisted": {
+            "hermione": "hermione.owner@quality.firecloud.org",
+            "ron": "ron.weasley@quality.firecloud.org"
+          },
+          "campaignManagers": {
+            "dumbledore": "dumbledore.admin@quality.firecloud.org",
+            "voldemort": "voldemort.admin@quality.firecloud.org"
+          }
+        }
+        EOF
+
+        cat << EOF > ${{ env.TEST_RESOURCES_PATH }}/application.conf
+        fireCloud {
+          baseUrl = "https://firecloudui.${{ inputs.bee_name }}.bee.envs-terra.bio/"
+          samApiUrl = "https://sam.${{ inputs.bee_name }}.bee.envs-terra.bio/"
+          orchApiUrl = "https://firecloudorch.${{ inputs.bee_name }}.bee.envs-terra.bio/"
+          rawlsApiUrl = "https://rawls.${{ inputs.bee_name }}.bee.envs-terra.bio/"
+          thurloeApiUrl = "https://thurloe.${{ inputs.bee_name }}.bee.envs-terra.bio/"
+          workspaceManagerApiUrl = "https://workspace.${{ inputs.bee_name }}.bee.envs-terra.bio/"
+          leonardoApiUrl = "https://leonardo.${{ inputs.bee_name }}.bee.envs-terra.bio/"
+          fireCloudId = "$(printf '%s' ${{ inputs.firecloud-secrets-b64 }} \
+                            | base64 --decode \
+                            | jq -r .firecloud_id)"
+          tcgaAuthDomain = "TCGA-dbGaP-Authorized"
+          dataRepoApiUrl = "https://data.${{ inputs.bee_name }}.bee.envs-terra.bio/"
+          gpAllocApiUrl = "https://gpalloc-qa.dsp-techops.broadinstitute.org/api/"
+        }
+
+        gcs {
+          appsDomain = "quality.firecloud.org"
+          qaEmail = "$(printf '%s' ${{ inputs.firecloud-users-b64 }} \
+                        | base64 --decode \
+                        | jq -r .service_acct_email)"
+          serviceProject = "broad-dsde-${{ inputs.test_env }}"
+          smoketestsProject = "broad-dsde-${{ inputs.test_env }}"
+          qaPemFile = "${{ env.TEST_RESOURCES_PATH }}/firecloud-account.pem"
+          qaJsonFile = "${{ env.TEST_RESOURCES_PATH }}/firecloud-account.json"
+          trialBillingPemFile = "${{ env.TEST_RESOURCES_PATH }}/trial-billing-account.pem"
+          trialBillingPemFileClientId = "$(printf '%s' ${{ inputs.trial-billing-json-key-b64 }} \
+                                            | base64 --decode \
+                                            | jq -r .client_email)"
+          orchStorageSigningSA = "$(printf '%s' ${{ inputs.rawls-json-key-b64 }} \
+                                    | base64 --decode \
+                                    | jq -r .client_email)"
+          billingAccount = "Broad Institute - 8201528"
+          billingAccountId = "billingAccounts/00708C-45D19D-27AAFA"
+          subEmail = "google@quality.firecloud.org"
+          firestoreAccountPath = "${{ env.TEST_RESOURCES_EXTRA_PATH }}/sam-firestore-account.json"
+          googleAccessPolicy = "891321614892"
+        }
+
+        users {
+          notSoSecretPassword = "$(printf '%s' ${{ inputs.firecloud-users-b64 }} \
+                                    | base64 --decode \
+                                    | jq -r .automation_users_passwd)"
+          tempSubjectId = "117891551413045861932"
+          # The payload of these tokens is { "eraCommonsUsername": <username>, "iat": <timestamp> } and have been encoded by dev Shibboleth.
+          # These tokens will need to be refreshed if/when we rotate Shibboleth's dev keys because they are decoded by the public key served by the live instance and would fail verification if they weren't updated.
+          # Each username can be found in a comment at the end of the line. These usernames are included in particular allowlists stored in the firecloud-whitelist-dev bucket in broad-dsde-dev
+          tcgaJsonWebTokenKey = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJlcmFDb21tb25zVXNlcm5hbWUiOiJ0Y2dhLXVzZXIiLCJpYXQiOjE2MTQ4ODIzMDIwMH0.S7RrbT8dfNVuQ-KdKXwjyvMiLSiaKHtsX00l8FzXuTMzb1FmS7xDxQlf2ZMTX2-BW1KRb8Hc7zMZ57LaizjBV4A-IGbbminOcdkIxtBsnmUWrT_UZrrcQD7AiXObVJdNx80CaozggVaAkWzd2WC-E_QRNC1C3YbQqCdErHxrBaLKrE7mU7RevCLQybrLCdcWFaKrrY8Lyvp_0yAJ0yd1iB86cr2tMvne7VGDGOmAWrFBm0FPr5J1tjzVYdpU9dY_Dpcd1E9tnQ9dCqaOmlC13V5dzI1BDt5oM74iwiuqQ8HbvHhgYE1oFJismKieW6VHDlKggie82dfG_Z86ajBOzg" # tcga-user
+          targetJsonWebTokenKey = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJlcmFDb21tb25zVXNlcm5hbWUiOiJ0YXJnZXQtdXNlciIsImlhdCI6MTYxNDg3NzUwNzAwfQ.pHJj6yt-lCowUp5cXP7UObU9yFsoQUOBfWX93jnnRBqPkIyEj2e5nKO_DMQl73oSj7WX3H_LVBExUbBUuFTjvJZ977nb6YouSg2IBqj3_bB8QGBrBqQT-ZlsoBfvQ8Q02pVSWBbppqueP4IqFdBgl8ot9pyEx2I_utpohL2VKwwQJrOE4IewGURxA1Ie8F-NIzpAIN2b2N2uV_dkeD5pM7DP7kHUpfnAdLlSkqKTj0pu_jVtdsdF29rWDaxU1uAoJN9YgkVtULaTZ3pTwrRE31WAvCIQhfBAF7CRzXRJwv9fubktiGC1mWeJ7eHH8wpOvysm7OL-kS0R7boNlA9qhA" # target-user
+          targetAndTcgaJsonWebTokenKey = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJlcmFDb21tb25zVXNlcm5hbWUiOiJmaXJlY2xvdWQtZGV2IiwiaWF0IjoxNjE0ODc3MTk3MDB9.k2HVt74OedfgP_bVHSz6U-1c25_XRMw2v8YtuiPHWZUPdYdXR8qZRzYq9YIUI1wbWtr6M7_w1XgBC9ubl7aLFtOcm00CSFAYkTA23NvF3jzrW_qoCArUfYP5GfvUAsA-8RPn-jIOpT5xBWp6vnoTElddiujrZ3_ykToB0s2ZE_cpi2uRUl6SQvNxsWmVdnAKi84NvPHKNwb3Z8HCQ9WdMJ53K2a_ks8psviQao-RvtLUO2hZY4G8cPM581WpfhZ_FM61EHqGQlflJlOSYceI6tiKuKoqPHvWHUAEkd5TdUtee1FVVgLYVEq6hidACMFSsanhqCfmnt4bA7Wlfzyt3A" # firecloud-dev
+          genericJsonWebTokenKey = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJlcmFDb21tb25zVXNlcm5hbWUiOiJub3QtYXV0aG9yaXplZCIsImlhdCI6MTYxNDg4MjQ0ODAwfQ.hwsisjGAoGk7IMSBF8Ku1SwJ3Igyc1HQncmuTThYvjADe9Jhwfs0ZaHUP1LnUAoq2ihUWfIthQhZB7smP0GrH1SJX7AUO1KRmj-ZSQcXQM55cwmUTEVPW1qQ-gQEhH7LC8TaHOw48tLbMy4ajt3yykIeAvtQHnU1Je9fhv3fGzSM6eR43W7HTOBncHL8aPxe4y9UQ5sFxx8hKe_N9lWfoNtwkpsRd7khsqMsMlS1jupLYRESgCwoThRt_1YdfsYunjpint_thbDoi4Padba9XCnD7e-z9GV5PrQ69lKlelCZWbLKiMmLu-Yeui0ksi1gYuE6-84NFmUr36k587yKxw" # not-authorized
+          userDataPath = "${{ env.TEST_RESOURCES_PATH }}/users.json"
+          # for smoketests
+          smoketestpassword = "$(printf '%s' ${{ inputs.firecloud-users-b64 }} \
+                                  | base64 --decode \
+                                  | jq -r .users_passwd)"
+          smoketestuser = "hermione.owner@quality.firecloud.org"
+        }
+
+        methods {
+          testMethod = "DO_NOT_CHANGE_test_method"
+          testMethodConfig = "DO_NOT_CHANGE_test1_config"
+          methodConfigNamespace = "automationmethods"
+          snapshotID = 1
+        }
+
+        chromeSettings {
+          chromedriverHost = "http://hub:4444/wd/hub"
+          chromedriverPath = "/usr/bin/chromedriver"
+        }
+        EOF
+      shell: bash
+
+    - name: Run app service automation tests
+      id: automation-tests
+      run: |
+        cd ${{ env.TEST_PATH }}
+        if [ -n "${{ inputs.e2e_env }}" ] && [ -e "${{ env.TEST_RESOURCES_PATH }}/${{ inputs.e2e_env }}" ]; then
+          cat ${{ env.TEST_RESOURCES_PATH }}/${{ inputs.e2e_env }}
+          source ${{ env.TEST_RESOURCES_PATH }}/${{ inputs.e2e_env }}
+        fi
+        sbt "${{ inputs.sbt-test-command }}"
+      shell: bash
+
+    - id: parse-test-results
+      if: always()
+      name: Parse test results
+      run : |
+        cd ${{ env.TEST_PATH }}
+        cp -R ../../scripts scripts
+        results_file="$(docker run -v "${PWD}:/working" -w /working broadinstitute/dsp-toolbox python scripts/parse_test_results.py ${{ inputs.service_repo }} ${{ inputs.test_run_id }} ${{ inputs.test_env }} ${{ inputs.build_id }})"
+        cat $results_file
+      shell: bash
