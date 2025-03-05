@@ -21,6 +21,7 @@ from queries import WORKFLOW_DATA_QUERY, INSERT_UPDATED_METRICS_QUERY
 import datetime
 import configparser
 import ast
+import pandas as pd
 
 # configure logging format
 LOG_FORMAT = "%(asctime)s %(levelname)-8s %(message)s"
@@ -36,7 +37,7 @@ class ExecutionData:
     ''''
     Class to store execution data for a single workflow run
     '''
-    def __init__(self, query_row: bigquery.table.Row):
+    def __init__(self, query_row: pd.core.series.Series):
         self.workflow_id = query_row.workflow_id
         self.date_executed = query_row.workflow_start
         # allowed statuses: "SUCCESSFUL", "FAILED", "ABORTED"
@@ -50,12 +51,10 @@ class WorkflowData:
     Class to store workflow data on the version level, and send it to dockstore
     '''
 
-    def __init__(self, query_row: bigquery.table.Row):
+    def __init__(self, query_row: pd.core.series.Series):
         self.source_url = query_row.source_url
         self.version = self.source_url.split('/')[5]
-
-        first_execution = ExecutionData(query_row)
-        self.workflow_executions = [first_execution]
+        self.workflow_executions = []
         self.sent_metric = False
 
     def add_execution(self, execution: ExecutionData):
@@ -114,7 +113,17 @@ def update_metadata_table(client, workflow_ids: list[str], test: bool):
 def get_and_send_workflow_data(client: bigquery.Client, dry_run: bool, lookback_window: int, config_parser: configparser.ConfigParser) -> list[str]:
     '''
     Query BigQuery for workflow execution data, send it to dockstore, and keep track of whether the metrics were sent
-    Note: Sends metrics for all executions of a workflow version at once
+    Sends metrics for all executions of a workflow version at once, each row is an execution of a workflow
+
+    Basic algorithm:
+    1. Query BigQuery for workflow execution data, convert to a pandas dataframe
+    2. Create a WorkflowData object with the first row
+    3. For each row (execution) in the query result:
+        a. If the sourceURL (workflow + version) is the same as the current workflow, add the execution to the current workflow
+        b. If the sourceURL is different, we've gotten to the executions of a different workflow
+            1. send metrics for the current workflow
+            2. set the current workflow using the values from the new sourceURL
+    4. Update the table of workflowIds we've sent metrics for
 
     :param client: BigQuery client, intialized with the project
     :param test: whether to run in test mode or actually send the metrics to dockstore
@@ -138,25 +147,26 @@ def get_and_send_workflow_data(client: bigquery.Client, dry_run: bool, lookback_
     dockstore_url = config_parser.get('Dockstore', 'url')
     dockstore_headers = ast.literal_eval(config_parser.get('Dockstore', 'headers'))
 
-    current_workflow = None
+    # convert the query result to a pandas dataframe
+    rows_df: pd.dataframe = rows.to_dataframe()
 
-    # Ordered by sourceURL, so we can send metrics for all executions of a workflow version at once
-    for row in rows:
-        if current_workflow is None:
-            current_workflow = WorkflowData(row)
-            print("setting first workflow")
-        elif row.source_url == current_workflow.source_url:
+    current_workflow = WorkflowData(rows_df.iloc[0])
+
+    # Rows are ordered by sourceURL, so we can send metrics for all executions of a workflow version at once
+    for idx, row in rows.iterrows():
+        if row.source_url == current_workflow.source_url:
             current_workflow.add_execution(ExecutionData(row))
         # new sourceURL, so send execution metrics for the previous workflow and reset current workflow
         else:
             current_workflow.send_metrics(dry_run, dockstore_url, dockstore_headers)
-            # if dockstore PUT is successful, add to the list of workflows to update in the metadata table
+            # if dockstore PUT is successful, add to the list of workflows to update in the 'cromwell_metadata_sent_to_dockstore' table
             if current_workflow.sent_metric:
                 success_count += len(current_workflow.workflow_executions)
                 workflow_ids = [execution.workflow_id for execution in current_workflow.workflow_executions]
                 updated_workflows.extend(workflow_ids)
             # reset the current_workflow to the new workflow
             current_workflow = WorkflowData(row)
+            current_workflow.add_execution(ExecutionData(row))
 
     # send metrics for the last workflow
     current_workflow.send_metrics(dry_run)
