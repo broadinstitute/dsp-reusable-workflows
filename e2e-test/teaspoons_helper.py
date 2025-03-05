@@ -25,7 +25,7 @@ def update_imputation_pipeline_workspace(teaspoons_url, workspace_project, works
         "toolVersion": wdl_method_version
     }
 
-    uri = f"{teaspoons_url}/api/admin/v1/pipelines/array_imputation/0"
+    uri = f"{teaspoons_url}/api/admin/v1/pipelines/array_imputation/1"
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json",
@@ -45,7 +45,7 @@ def prepare_imputation_pipeline(teaspoons_url, token):
     request_body = {
         "jobId": f'{uuid.uuid4()}',
         "pipelineName": "array_imputation",
-        "pipelineVersion": 0,
+        "pipelineVersion": 1,
         "pipelineInputs": {
             "multiSampleVcf": "this/is/a/fake/file.vcf.gz",
             "outputBasename": "fake_basename"
