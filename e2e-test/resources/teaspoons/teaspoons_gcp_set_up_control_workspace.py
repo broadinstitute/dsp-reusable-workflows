@@ -58,7 +58,6 @@ emails_to_share_with = args.share_with
 auth_domains = [args.auth_domain]
 
 rawls_url = f"https://rawls.{env_string}"
-teaspoons_url = f"https://teaspoons.{env_string}"
 if is_bee:
     firecloud_orch_url = f"https://firecloudorch.{env_string}" 
 else:

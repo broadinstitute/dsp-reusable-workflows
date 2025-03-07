@@ -114,9 +114,24 @@ jobs:
           echo "found config file at $CONFIG_FILE"
           [ -f "$CONFIG_FILE" ] || { echo "Config file not found"; exit 1; }
           
-          TEASPOONS_API_URL="https://teaspoons.$BEE_NAME.bee.envs-terra.bio"
+          # update TEASPOONS_API_URL
+          TEASPOONS_API_URL_VALUE="https://teaspoons.$BEE_NAME.bee.envs-terra.bio"
+          sed -i -e "s|^TEASPOONS_API_URL=.*|TEASPOONS_API_URL=$TEASPOONS_API_URL_VALUE|" "$CONFIG_FILE"
+
+          # update OAUTH_OPENID_CONFIGURATION_URI
+          OAUTH_OPENID_CONFIGURATION_URI_VALUE="https://terradevb2c.b2clogin.com/terradevb2c.onmicrosoft.com/b2c_1a_signup_signin_dev/v2.0/.well-known/openid-configuration"
+          sed -i -e "s|^OAUTH_OPENID_CONFIGURATION_URI=.*|OAUTH_OPENID_CONFIGURATION_URI=$OAUTH_OPENID_CONFIGURATION_URI_VALUE|" "$CONFIG_FILE"
+
+          # update OAUTH_CLIENT_ID
+          OAUTH_CLIENT_ID_VALUE="xxxxxxxxx" # TODO update when we have this value
           sed -i -e "s|^TEASPOONS_API_URL=.*|TEASPOONS_API_URL=$TEASPOONS_API_URL|" "$CONFIG_FILE"
-          grep TEASPOONS_API_URL "$CONFIG_FILE" || { echo "Failed to update config"; exit 1; }
+
+          grep TEASPOONS_API_URL_VALUE "$CONFIG_FILE" || { echo "Failed to update config's TEASPOONS_API_URL"; exit 1; }
+          grep OAUTH_OPENID_CONFIGURATION_URI_VALUE "$CONFIG_FILE" || { echo "Failed to update config's OAUTH_OPENID_CONFIGURATION_URI"; exit 1; }
+          grep OAUTH_CLIENT_ID_VALUE "$CONFIG_FILE" || { echo "Failed to update config's OAUTH_CLIENT_ID"; exit 1; }
+
+          echo "config file contents:"
+          cat $CONFIG_FILE
 
           echo "### RUNNING CLI TEST ###"
           poetry run terralab --debug login-with-oauth "$USER_TOKEN"
