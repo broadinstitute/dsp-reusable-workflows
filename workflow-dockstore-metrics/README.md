@@ -6,8 +6,9 @@ Requires:
 - activating a poetry env, then `poetry install` to install dependencies
 
 Args:
--t --test: Run in test mode. Does not send metrics to dockstore or update the metadata table.
--l --login: Re-authenticate with gcloud
+--dry_run: Run in test mode. Does not send metrics to dockstore or update the metadata table.
+--login: default Re-authenticate with gcloud
+--lookback_window: How many days of metrics to send (default 2)
 
 Example usage:
-`python workflow_dockstore_metrics/pull_and_send_metrics.py -t -l`
+`python workflow_dockstore_metrics/pull_and_send_metrics.py --dry_run --login --lookback_window 1`

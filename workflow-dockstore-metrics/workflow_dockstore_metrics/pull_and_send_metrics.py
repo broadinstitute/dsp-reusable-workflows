@@ -7,12 +7,15 @@ Requires:
  - activating the associated poetry env with `poetry shell`, then poetry install
 
 Args:
-    -t --test: Run in test mode. Does not send metrics to dockstore or update the metadata table.
-    -l --login: Re-authenticate with gcloud
+--dry_run: Run in test mode. Does not send metrics to dockstore or update the metadata table.
+--login: default Re-authenticate with gcloud
+--lookback_window: How many days of metrics to send (default 2)
+
+Example usage:
+`python workflow_dockstore_metrics/pull_and_send_metrics.py --dry_run --login --lookback_window 1`
 """
 
 from google.cloud import bigquery
-from google.oauth2 import service_account
 import requests
 import logging
 import os
@@ -38,24 +41,23 @@ class ExecutionData:
     Class to store execution data for a single workflow run
     '''
     def __init__(self, query_row: pd.core.series.Series):
-        self.workflow_id = query_row.workflow_id
-        self.date_executed = query_row.workflow_start
+        self.workflow_id: int = query_row.workflow_id
+        self.date_executed: str = query_row.workflow_start
         # allowed statuses: "SUCCESSFUL", "FAILED", "ABORTED"
-        self.execution_status ="SUCCESSFUL"  if query_row.status == "Succeeded" else query_row.status.upper()
+        self.execution_status: str ="SUCCESSFUL"  if query_row.status == "Succeeded" else query_row.status.upper()
         # represents duration in seconds in ISO 8601 duration format
-        self.execution_time = f"PT{query_row.workflow_runtime_time}S"
+        self.execution_time: str = f"PT{query_row.workflow_runtime_time}S"
 
 
 class WorkflowData:
     ''''
-    Class to store workflow data on the version level, and send it to dockstore
+    Class to store workflow data on the workflow + version level, and send it to dockstore
     '''
-
     def __init__(self, query_row: pd.core.series.Series):
-        self.source_url = query_row.source_url
-        self.version = self.source_url.split('/')[5]
-        self.workflow_executions = []
-        self.sent_metric = False
+        self.source_url: str = query_row.source_url
+        self.version: str = self.source_url.split('/')[5]
+        self.workflow_executions: list = []
+        self.sent_metric: bool = False
 
     def add_execution(self, execution: ExecutionData):
         self.workflow_executions.append(execution)
@@ -95,7 +97,7 @@ class WorkflowData:
             self.sent_metric = True
 
 
-def update_metadata_table(client, workflow_ids: list[str], test: bool):
+def update_sent_to_dockstore_table(client, workflow_ids: list[str], test: bool):
     timestamp_datetime = datetime.datetime.now().timestamp()
     values = f"', {timestamp_datetime}), ('".join(workflow_ids)
     job_config = bigquery.QueryJobConfig(
@@ -192,7 +194,7 @@ def main(dry_run: bool, login: bool, lookback_window: int):
         os.system("gcloud auth application-default login")
     client = bigquery.Client(project=config_parser.get('General', 'bigQuery_project_id'))
     successfully_sent_workflows = get_and_send_workflow_data(client, dry_run, lookback_window, config_parser)
-    update_metadata_table(client, successfully_sent_workflows, dry_run)
+    update_sent_to_dockstore_table(client, successfully_sent_workflows, dry_run)
 
 
 if __name__ == '__main__':
