@@ -115,6 +115,9 @@ try:
     # query for user quota consumed before running pipeline, expect the default of 0
     assert 0 == query_for_user_quota_consumed(teaspoons_url, user_token)
 
+    logging.info("sleeping for 5 minutes to see if this addresses seemingly transient issues with batch")
+    time.sleep(300)
+
     # prepare teaspoons imputation pipeline run
     logging.info("preparing imputation pipeline run")
     job_id, pipeline_file_inputs = prepare_imputation_pipeline(teaspoons_url, user_token)

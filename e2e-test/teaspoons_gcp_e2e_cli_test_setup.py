@@ -105,6 +105,9 @@ try:
     logging.info("updating imputation workspace info")
     update_imputation_pipeline_workspace(teaspoons_url, billing_project_name, workspace_name, wdl_method_version, admin_token)
 
+    logging.info("sleeping for 5 minutes to see if this addresses seemingly transient issues with batch")
+    time.sleep(300)
+
     logging.info("SETUP COMPLETE")
 
 except Exception as e:
