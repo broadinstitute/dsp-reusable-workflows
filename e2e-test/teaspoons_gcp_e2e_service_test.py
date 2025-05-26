@@ -158,8 +158,8 @@ finally:
     # delete workspace
     logging.info("Starting workspace cleanup as part of e2e test...")
     try:
-        delete_workspace(billing_project_name, workspace_name, rawls_url, admin_token)
-        logging.info("Workspace cleanup complete")
+        #delete_workspace(billing_project_name, workspace_name, rawls_url, admin_token)
+        logging.info("Workspace cleanup complete - SIKE!")
     # Catch the exception and continue with the test since we don't want cleanup to affect the test results.
     # We can assume that Janitor will clean up the workspace if the test fails
     except Exception as e:
@@ -168,8 +168,8 @@ finally:
     # delete billing project
     logging.info("Starting billing project cleanup as part of e2e test...")
     try:
-        delete_gcp_billing_project(rawls_url, billing_project_name, admin_token)
-        logging.info("Billing project cleanup complete")
+        #delete_gcp_billing_project(rawls_url, billing_project_name, admin_token)
+        logging.info("Billing project cleanup complete - SIKE")
     # Catch the exception and continue with the test since we don't want cleanup to affect the test results.
     # We can assume that Janitor will clean up the billing project if the test fails
     except Exception as e:
