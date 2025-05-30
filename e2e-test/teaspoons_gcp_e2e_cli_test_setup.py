@@ -113,7 +113,7 @@ try:
     
     # update user quota limit to 2500
     update_quota_limit_for_user(sam_url, teaspoons_url, admin_token, user_email, 2500)
-
+    
     logging.info("SETUP COMPLETE")
 
 except Exception as e:
