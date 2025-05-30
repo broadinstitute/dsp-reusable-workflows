@@ -271,7 +271,7 @@ def update_quota_limit_for_user(sam_url, teaspoons_url, admin_token, user_email,
     response = json.loads(response.text)
     user_id = response['userInfo']['userSubjectId']
 
-    uri = f"{teaspoons_url}/api/admin/v1/quotas/array_imputation/{user_id}'"
+    uri = f"{teaspoons_url}/api/admin/v1/quotas/array_imputation/{user_id}"
     headers = {
         "Authorization": f"Bearer {admin_token}",
         "accept": "application/json",
