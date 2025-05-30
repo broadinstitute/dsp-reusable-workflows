@@ -87,7 +87,7 @@ jobs:
           BILLING_PROJECT_NAME: ${{ inputs.billing-project-name }}
           BILLING_ACCOUNT_NAME: 'billingAccounts/00708C-45D19D-27AAFA'
           USER_TOKEN: ${{ steps.obtain_user_token.outputs.access_token }}
-          USER_EMAIL: 'hermione.owner@quality.firecloud.org'
+          USER_EMAIL: 'hermione.owner@test.firecloud.org'
           ADMIN_TOKEN: ${{ steps.obtain_admin_user_token.outputs.access_token }}
           WDL_METHOD_VERSION: ${{ inputs.wdl-method-version }}
           WORKSPACE_NAME: 'teaspoons_e2e_cli_test_workspace'

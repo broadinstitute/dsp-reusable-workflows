@@ -152,7 +152,7 @@ def query_for_user_quota_consumed(teaspoons_url, token):
     if status_code != 200:
         raise Exception(response.text)
 
-    logging.info(f"Successfully retried user quota")
+    logging.info(f"Successfully retrieved user quota")
     response = json.loads(response.text)
 
     return response['quotaConsumed']
