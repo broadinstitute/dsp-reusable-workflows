@@ -248,3 +248,43 @@ def ping_until_200_with_timeout(url, timeout_seconds=300):
             logging.warning(f"URL {url} not reachable")
         time.sleep(30)
     raise Exception(f"Timed out waiting for {url} to return 200")
+
+# update the quota limit for a user for the array_imputation_pipeline
+def update_quota_limit_for_user(sam_url, teaspoons_url, admin_token, user_email, new_quota_limit):
+
+    uri = f"{sam_url}/api/admin/v1/user/email/{user_email}"
+    headers = {
+        "Authorization": f"Bearer {admin_token}",
+        "accept": "application/json",
+        "Content-Type": "application/json"
+    }
+
+    response = requests.get(uri, headers=headers)
+    status_code = response.status_code
+
+    if status_code != 200:
+        raise Exception(response.text)
+
+    logging.info(f"Successfully retrieved user info for {user_email}")
+
+    # parse the response to get the user ID
+    response = json.loads(response.text)
+    user_id = response['userInfo']['userSubjectId']
+
+    uri = f"{teaspoons_url}/api/admin/v1/quotas/array_imputation/{user_id}'"
+    headers = {
+        "Authorization": f"Bearer {admin_token}",
+        "accept": "application/json",
+        "Content-Type": "application/json"
+    }
+
+    request_body = {
+        "quotaLimit": new_quota_limit
+    }
+
+    response = requests.patch(uri, headers=headers, json=request_body)
+    status_code = response.status_code
+    if status_code != 200:
+        raise Exception(response.text)
+
+    logging.info(f"Successfully updated quota for user {user_email} to {new_quota_limit}")
