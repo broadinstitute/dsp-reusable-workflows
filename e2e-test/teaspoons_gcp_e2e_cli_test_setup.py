@@ -2,7 +2,8 @@ import time
 
 from workspace_helper import create_gcp_workspace, delete_workspace, share_workspace_grant_owner, add_wdl_to_gcp_workspace
 from helper import create_gcp_billing_project, delete_gcp_billing_project
-from teaspoons_helper import create_and_populate_terra_group, update_imputation_pipeline_workspace, ping_until_200_with_timeout
+from teaspoons_helper import create_and_populate_terra_group, update_imputation_pipeline_workspace, \
+    ping_until_200_with_timeout, query_for_user_quota_consumed, update_quota_limit_for_user
 
 import os
 import logging
@@ -11,6 +12,8 @@ import logging
 # Setup configuration
 # The environment variables are injected as part of the e2e test setup which does not pass in any args
 admin_token = os.environ.get("ADMIN_TOKEN") # admin user who has access to the terra billing project
+user_token = os.environ.get("USER_TOKEN") # the user who will kick off the teaspoons job
+user_email = os.environ.get("USER_EMAIL") # the user we will want to increase quota_limit for
  
 # e2e test is using the teaspoons qa service account
 teaspoons_sa_email = "teaspoons-qa@broad-dsde-qa.iam.gserviceaccount.com"
@@ -105,9 +108,12 @@ try:
     logging.info("updating imputation workspace info")
     update_imputation_pipeline_workspace(teaspoons_url, billing_project_name, workspace_name, wdl_method_version, admin_token)
 
-    logging.info("sleeping for 5 minutes to see if this addresses seemingly transient issues with batch")
-    time.sleep(300)
-
+    # query for user quota consumed before running pipeline, expect the default of 0
+    assert 0 == query_for_user_quota_consumed(teaspoons_url, user_token)
+    
+    # update user quota limit to 2500
+    update_quota_limit_for_user(sam_url, teaspoons_url, admin_token, user_email, 2500)
+    
     logging.info("SETUP COMPLETE")
 
 except Exception as e:
