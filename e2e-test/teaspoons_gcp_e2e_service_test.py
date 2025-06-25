@@ -80,6 +80,10 @@ try:
         auth_domains=[auth_domain_name], 
         enhanced_bucket_logging=True)
 
+    logging.info("sleeping for 5 minutes to let the environment settle after creating the workspace. This is to deal "
+                 "with transient issues related to google batch accounts,")
+    time.sleep(300)
+
     # share created workspace with the teaspoons service account
     logging.info("sharing workspace with teaspoons qa service account")
     share_workspace_grant_owner(firecloud_orch_url, billing_project_name, workspace_name,
