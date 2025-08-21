@@ -118,10 +118,10 @@ try:
     update_imputation_pipeline_workspace(teaspoons_url, billing_project_name, workspace_name, wdl_method_version, admin_token)
 
     # query for user quota consumed before running pipeline, expect the default of 0
-    assert 0 == query_for_user_quota_consumed(teaspoons_url, user_token)
+    assert 2500 == query_for_user_quota_consumed(teaspoons_url, user_token)
 
-    # update user quota limit to 2500
-    update_quota_limit_for_user(sam_url, teaspoons_url, admin_token, user_email, 2500)
+    # update user quota limit to 3000
+    update_quota_limit_for_user(sam_url, teaspoons_url, admin_token, user_email, 3000)
 
     # prepare teaspoons imputation pipeline run
     logging.info("preparing imputation pipeline run")
