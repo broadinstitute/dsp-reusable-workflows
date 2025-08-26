@@ -180,3 +180,27 @@ else:
 logging.info(f"Adding \"{wdl_name}\" ({method_definition_dict['methodPath']}) to workspace")
 
 add_wdl_to_gcp_workspace(billing_project_name, workspace_name, wdl_namespace, wdl_name, method_definition_dict, root_entity_type, {}, {}, firecloud_orch_url, user_token)
+
+
+# import inputQC method
+wdl_name = "InputQC"
+
+use_empty_wdl = args.use_empty_wdl
+if use_empty_wdl:
+    method_definition_dict = {
+        "methodUri": f"dockstore://github.com%2FDataBiosphere%2Fterra-scientific-pipelines-service%2FInputQCEmpty/{wdl_tag_or_branch}",
+        "sourceRepo": "dockstore",
+        "methodPath": "github.com/DataBiosphere/terra-scientific-pipelines-service/InputQCEmpty",
+        "methodVersion": wdl_tag_or_branch
+    }
+else:
+    method_definition_dict = {
+        "methodUri": f"dockstore://github.com%2Fbroadinstitute%2Fwarp%2FArrayImputationQC/{wdl_tag_or_branch}",
+        "sourceRepo": "dockstore",
+        "methodPath": "github.com/broadinstitute/warp/ArrayImputationQC",
+        "methodVersion": wdl_tag_or_branch
+    }
+
+logging.info(f"Adding \"{wdl_name}\" ({method_definition_dict['methodPath']}) to workspace")
+
+add_wdl_to_gcp_workspace(billing_project_name, workspace_name, wdl_namespace, wdl_name, method_definition_dict, root_entity_type, {}, {}, firecloud_orch_url, user_token)
