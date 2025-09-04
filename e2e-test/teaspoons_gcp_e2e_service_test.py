@@ -113,6 +113,17 @@ try:
     }
     add_wdl_to_gcp_workspace(billing_project_name, workspace_name, wdl_namespace, wdl_name, method_definition_dict, root_entity_type, {}, {}, firecloud_orch_url, admin_token)
 
+    # create a new input qc method that teaspoons will run
+    logging.info("creating input qc method")
+    wdl_name = "InputQC"
+    method_definition_dict = {
+        "methodUri": f"dockstore://github.com%2FDataBiosphere%2Fterra-scientific-pipelines-service%2FInputQCEmpty/{wdl_method_version}",
+        "sourceRepo": "dockstore",
+        "methodPath": "github.com/DataBiosphere/terra-scientific-pipelines-service/InputQCEmpty",
+        "methodVersion": wdl_method_version
+    }
+    add_wdl_to_gcp_workspace(billing_project_name, workspace_name, wdl_namespace, wdl_name, method_definition_dict, root_entity_type, {}, {}, firecloud_orch_url, admin_token)
+
     # use admin endpoint to set imputation workspace info
     logging.info("updating imputation workspace info")
     update_imputation_pipeline_workspace(teaspoons_url, billing_project_name, workspace_name, wdl_method_version, admin_token)
