@@ -108,7 +108,7 @@ try:
     }
     add_wdl_to_gcp_workspace(billing_project_name, workspace_name, wdl_namespace, wdl_name, method_definition_dict, root_entity_type, {}, {}, firecloud_orch_url, admin_token)
 
-    # create a new quota consumed method that teaspoons will run
+    # create a new input qc method that teaspoons will run
     logging.info("creating input qc method")
     wdl_name = "InputQC"
     method_definition_dict = {
