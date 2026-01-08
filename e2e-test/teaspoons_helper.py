@@ -137,6 +137,26 @@ def poll_for_imputation_job(result_url, token):
 
     raise Exception(f"teaspoons pipeline did not complete in 25 minutes")
 
+def get_output_signed_urls(teaspoons_url, job_id, token):
+
+    uri = f"{teaspoons_url}/api/pipelineruns/v2/result/{job_id}/output/signed-urls"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    response = requests.get(uri, headers=headers)
+    status_code = response.status_code
+
+    if status_code != 200:
+        raise Exception(response.text)
+    
+    response = json.loads(response.text)
+
+    logging.info(f"Successfully retrieved output signed urls")
+
+    return response['outputSignedUrls']
+
 def query_for_user_quota_consumed(teaspoons_url, token):
 
     uri = f"{teaspoons_url}/api/quotas/v1/array_imputation"

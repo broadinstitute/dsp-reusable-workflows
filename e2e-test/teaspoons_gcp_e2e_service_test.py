@@ -5,7 +5,7 @@ from helper import create_gcp_billing_project, delete_gcp_billing_project
 from teaspoons_helper import (
     create_and_populate_terra_group, update_imputation_pipeline_workspace, query_for_user_quota_consumed,
     prepare_imputation_pipeline, upload_file_with_signed_url, start_imputation_pipeline, poll_for_imputation_job,
-    download_with_signed_url, ping_until_200_with_timeout, update_quota_limit_for_user
+    download_with_signed_url, ping_until_200_with_timeout, update_quota_limit_for_user, get_output_signed_urls
 )
 
 import os
@@ -153,6 +153,9 @@ try:
     # poll for imputation pipeline
     logging.info("polling for imputation pipeline")
     pipeline_output = poll_for_imputation_job(result_url, user_token)
+
+    # generate output signed urls
+    signed_urls = get_output_signed_urls(teaspoons_url, job_id, user_token)
 
     # grab data using signed url
     for key, value in pipeline_output.items():
