@@ -138,6 +138,21 @@ def poll_for_imputation_job(result_url, token):
     raise Exception(f"teaspoons pipeline did not complete in 25 minutes")
 
 def get_output_signed_urls(teaspoons_url, job_id, token):
+    """
+	    Retrieve signed URLs for the outputs of a completed pipeline run.
+	
+	    This function calls the v2 teaspoons pipeline runs API to obtain
+	    time-limited signed URLs for the output artifacts associated with
+	    the specified job ID.
+	
+	    :param teaspoons_url: Base URL of the teaspoons service (e.g. https://host).
+	    :param job_id: Identifier of the pipeline job whose outputs are requested.
+	    :param token: User's bearer token used for authorization with the teaspoons API.
+	    :return: The ``outputSignedUrls`` field from the API response, typically a
+	             mapping of output names to their corresponding signed URLs.
+	    :raises Exception: If the HTTP response status code is not 200 or the API
+	                       returns an error payload.
+	    """
 
     uri = f"{teaspoons_url}/api/pipelineruns/v2/result/{job_id}/output/signed-urls"
     headers = {

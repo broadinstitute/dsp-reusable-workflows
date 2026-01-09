@@ -152,7 +152,7 @@ try:
 
     # poll for imputation pipeline
     logging.info("polling for imputation pipeline")
-    pipeline_output = poll_for_imputation_job(result_url, user_token)
+    poll_for_imputation_job(result_url, user_token)
 
     # generate output signed urls
     signed_urls = get_output_signed_urls(teaspoons_url, job_id, user_token)
