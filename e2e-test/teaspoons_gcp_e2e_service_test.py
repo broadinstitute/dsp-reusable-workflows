@@ -158,7 +158,7 @@ try:
     signed_urls = get_output_signed_urls(teaspoons_url, job_id, user_token)
 
     # grab data using signed url
-    for key, value in pipeline_output.items():
+    for key, value in signed_urls.items():
         logging.info(f"attempting to retrieve {key} output")
         download_with_signed_url(value)
         logging.info("successfully downloaded file")
