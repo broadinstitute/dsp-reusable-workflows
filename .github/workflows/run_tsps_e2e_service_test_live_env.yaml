@@ -1,4 +1,4 @@
-name: run_tsps_e2e_service_test_real_sample.yml
+name: run_tsps_e2e_service_test_live_env.yml
 
 on:
   pull_request: # TODO: remove this before merge
@@ -21,7 +21,7 @@ on:
         type: string
 
 jobs:
-  run-e2e-test-job:
+  run-e2e-test-live-env-job:
     runs-on: ubuntu-latest
     permissions:
       contents: read

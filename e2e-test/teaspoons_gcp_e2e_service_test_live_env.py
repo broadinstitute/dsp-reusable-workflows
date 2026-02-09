@@ -1,3 +1,6 @@
+# This script performs an end-to-end test of the Teaspoons GCP service in a live environment (dev or staging).
+# It will use the service to run an imputation pipeline with provided input file and verify that the outputs are correct.
+
 from teaspoons_helper import (
     get_user_quota_details, prepare_imputation_pipeline, upload_file_with_signed_url, start_imputation_pipeline,
     poll_for_imputation_job, download_and_verify_outputs, update_quota_limit_for_user, get_output_signed_urls,
@@ -39,10 +42,10 @@ input_gs_file_path = f"e2e-test-input-files/{input_file_name}"
 
 
 # -----------------------------------------------------------------------------------------------------
-# ---------------------- Start Teaspoons GCP Service E2E test (real sample data) ----------------------
+# ---------------------- Start Teaspoons GCP Service E2E test in live environment ---------------------
 found_exception = False
 try:
-    logging.info(f"Starting Teaspoons GCP E2E test with real sample data in **{env_name}** environment")
+    logging.info(f"Starting Teaspoons GCP E2E test in **{env_name.upper()}** environment")
 
     if env_name == "dev":
         sam_url = "https://sam.dsde-dev.broadinstitute.org"
