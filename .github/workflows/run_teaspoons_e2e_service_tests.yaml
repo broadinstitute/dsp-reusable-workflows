@@ -23,9 +23,6 @@ on:
 jobs:
   run-e2e-test-job:
     runs-on: ubuntu-latest
-    permissions:
-      contents: 'read'
-      id-token: 'write'
     steps:
       - name: "Checkout dsp-reusable-workflows"
         uses: actions/checkout@v3
