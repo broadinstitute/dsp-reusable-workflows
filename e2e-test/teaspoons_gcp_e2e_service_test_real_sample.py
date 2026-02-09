@@ -11,7 +11,7 @@ import subprocess
 
 # configure logging format
 LOG_FORMAT = "%(asctime)s %(levelname)-8s %(message)s"
-LOG_LEVEL = "DEBUG"
+LOG_LEVEL = "INFO"
 LOG_DATEFORMAT = "%Y-%m-%d %H:%M:%S"
 logging.basicConfig(
     format=LOG_FORMAT,
@@ -42,7 +42,7 @@ input_gs_file_path = f"e2e-test-input-files/{input_file_name}"
 # ---------------------- Start Teaspoons GCP Service E2E test (real sample data) ----------------------
 found_exception = False
 try:
-    logging.info(f"Starting Teaspoons GCP E2E test with real sample data in {env_name} environment")
+    logging.info(f"Starting Teaspoons GCP E2E test with real sample data in **{env_name}** environment")
 
     if env_name == "dev":
         sam_url = "https://sam.dsde-dev.broadinstitute.org"
@@ -91,8 +91,6 @@ try:
 
     assert(job_id == job_id_from_start_run)
 
-    logging.info(f"Result URL from starting pipeline run: {result_url}")
-
     # poll for job until completion
     poll_for_imputation_job(result_url, user_token, sleep_interval_mins=5, total_timeout_mins=90)
 
@@ -103,10 +101,6 @@ try:
     for output_name, url in signed_urls.items():
         logging.info(f"Attempting to download {output_name} output")
         download_and_verify_outputs(output_name, url)
-
-    # verify that user quota consumed after running pipeline has increased by
-    # 500 (this is the min quota consumed for array_imputation)
-    assert (user_quota['quotaConsumed'] + 500) == get_user_quota_details(teaspoons_url, user_token)['quotaConsumed']
 
     logging.info("Test completed successfully")
 

@@ -40,6 +40,7 @@ logging.basicConfig(
     format=LOG_FORMAT,
     level=getattr(logging, LOG_LEVEL),
     datefmt=LOG_DATEFORMAT,
+    force=True  # override any existing logging configuration
 )
 
 # ---------------------- Start Teaspoons GCP CLI E2E test SETUP ----------------------
