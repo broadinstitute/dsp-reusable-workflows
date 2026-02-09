@@ -17,7 +17,7 @@ on:
       input_vcf_file_name:
         description: 'Name of the input VCF file to use in the test (note: just the file name and not the entire path)'
         required: true
-        default: 'NA12878_10_samples_chr1_chr20.vcf.gz' # small VCF file with 10 samples and chr1 and chr20 data only
+        default: 'NA12878_10_samples_chr1_chr20.vcf.gz' # small VCF file with 10 samples, chr1 and chr20 data only
         type: string
 
 jobs:

@@ -34,7 +34,8 @@ env_name = os.environ.get("ENV_NAME") # dev or staging, used to determine urls a
 input_file_name = os.environ.get("INPUT_VCF_FILE_NAME") # name of input file to be used for test, should be located in the input gs bucket for the environment specified by env_name
 
 # GCS bucket path where input data is stored
-input_gs_file_path = f"e2e_test_input_files/{input_file_name}"
+input_gs_bucket_name = "teaspoons-testing"
+input_gs_file_path = f"e2e-test-input-files/{input_file_name}"
 
 
 # -----------------------------------------------------------------------------------------------------
@@ -46,11 +47,9 @@ try:
     if env_name == "dev":
         sam_url = "https://sam.dsde-dev.broadinstitute.org"
         teaspoons_url = "https://teaspoons.dsde-dev.broadinstitute.org/"
-        input_gs_bucket_name = "fc-secure-972057b6-fce1-4ec9-be0c-0e5c97fdc3e8"
     else:
         sam_url = "https://sam.dsde-staging.broadinstitute.org"
         teaspoons_url = "https://teaspoons.dsde-staging.broadinstitute.org/"
-        input_gs_bucket_name = "fc-secure-80b58e5a-e3a9-45c1-8ce6-58a54f222253"
 
     # get user's current available quota
     # note: calling get_user_quota_details will add an entry in the teaspoons db if one does not already exist
