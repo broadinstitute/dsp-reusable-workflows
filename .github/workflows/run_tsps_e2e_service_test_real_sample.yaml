@@ -64,11 +64,11 @@ jobs:
           export_environment_variables: false
       - name: Run e2e test
         env:
-          ENV_NAME: ${{ inputs.env-name }}
+          ENV_NAME: 'dev' # ${{ inputs.env-name }}
           USER_TOKEN: ${{ steps.obtain_user_token.outputs.access_token }}
           USER_EMAIL: 'hermione.owner@quality.firecloud.org'
           ADMIN_TOKEN: ${{ steps.obtain_admin_token.outputs.access_token }}
-          INPUT_VCF_FILE_NAME: ${{ inputs.input_vcf_file_name }}
+          INPUT_VCF_FILE_NAME: 'NA12878_10_samples_chr1_chr20.vcf.gz' # ${{ inputs.input_vcf_file_name }}
         run: |
           cd dsp-reusable-workflows/
           python e2e-test/teaspoons_gcp_e2e_service_test_real_sample.py
