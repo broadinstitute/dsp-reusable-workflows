@@ -50,7 +50,7 @@ jobs:
           workload_identity_provider: 'projects/1038484894585/locations/global/workloadIdentityPools/github-wi-pool/providers/github-wi-provider'
           service_account: 'firecloud-qa@broad-dsde-qa.iam.gserviceaccount.com'
           access_token_scopes: 'profile, email, openid'
-          access_token_subject: 'hermione.owner@test.firecloud.org'
+          access_token_subject: 'hermione.owner@quality.firecloud.org'
           export_environment_variables: false
       - name: Generate OAuth2 2.0 access token for admin user and billing project owner
         id: 'obtain_admin_token'
@@ -60,13 +60,13 @@ jobs:
           workload_identity_provider: 'projects/1038484894585/locations/global/workloadIdentityPools/github-wi-pool/providers/github-wi-provider'
           service_account: 'firecloud-qa@broad-dsde-qa.iam.gserviceaccount.com'
           access_token_scopes: 'openid, https://www.googleapis.com/auth/userinfo.email, https://www.googleapis.com/auth/userinfo.profile, https://www.googleapis.com/auth/cloud-billing'
-          access_token_subject: 'dumbledore.admin@test.firecloud.org'
+          access_token_subject: 'dumbledore.admin@quality.firecloud.org'
           export_environment_variables: false
       - name: Run e2e test
         env:
           ENV_NAME: 'dev' # ${{ inputs.env-name }}
           USER_TOKEN: ${{ steps.obtain_user_token.outputs.access_token }}
-          USER_EMAIL: 'hermione.owner@test.firecloud.org'
+          USER_EMAIL: 'hermione.owner@quality.firecloud.org'
           ADMIN_TOKEN: ${{ steps.obtain_admin_token.outputs.access_token }}
           INPUT_VCF_FILE_NAME: 'NA12878_10_samples_chr1_chr20.vcf.gz' # ${{ inputs.input_vcf_file_name }}
         run: |
