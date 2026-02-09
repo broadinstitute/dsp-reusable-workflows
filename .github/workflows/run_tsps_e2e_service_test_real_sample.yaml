@@ -1,6 +1,7 @@
 name: run_tsps_e2e_service_test_real_sample.yml
 
 on:
+  pull_request:
   workflow_dispatch: # change this to workflow_call before merge
     inputs:
       env-name:
