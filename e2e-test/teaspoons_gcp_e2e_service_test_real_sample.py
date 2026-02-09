@@ -71,7 +71,7 @@ try:
     # download input file locally
     local_input_file_path = "/tmp"
     logging.info(f"Downloading input file from gs://{input_gs_bucket_name}/{input_gs_file_path} to {local_input_file_path}")
-    download_file_from_gcs(input_gs_bucket_name, input_gs_file_path, local_input_file_path, admin_token)
+    download_file_from_gcs(input_gs_bucket_name, input_gs_file_path, local_input_file_path, user_token)
 
     # prepare imputation pipeline run
     logging.info("Preparing imputation pipeline run")
