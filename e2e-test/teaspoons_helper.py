@@ -6,6 +6,8 @@ import uuid
 import time
 import tempfile
 import urllib.parse
+from google.cloud import storage
+from google.oauth2.credentials import Credentials
 
 # configure logging format
 LOG_FORMAT = "%(asctime)s %(levelname)-8s %(message)s"
@@ -41,16 +43,16 @@ def update_imputation_pipeline_workspace(teaspoons_url, workspace_project, works
     logging.info(f"successfully updated imputation pipeline workspace and tool version to: {workspace_project}, {workspace_name}, {wdl_method_version}")
 
 
-def prepare_imputation_pipeline(teaspoons_url, token):
+def prepare_imputation_pipeline(teaspoons_url, multi_sample_vcf_input_path, output_basename, token):
     request_body = {
         "jobId": f'{uuid.uuid4()}',
         "pipelineName": "array_imputation",
         "pipelineVersion": 1,
         "pipelineInputs": {
-            "multiSampleVcf": "this/is/a/fake/file.vcf.gz",
-            "outputBasename": "fake_basename"
+            "multiSampleVcf": f'{multi_sample_vcf_input_path}',
+            "outputBasename": f'{output_basename}'
         },
-        "description": "e2e test run"
+        "description": "GHA e2e test run"
     }
 
     uri = f"{teaspoons_url}/api/pipelineruns/v1/prepare"
@@ -66,7 +68,7 @@ def prepare_imputation_pipeline(teaspoons_url, token):
     if status_code != 200:
         raise Exception(response.text)
 
-    logging.info(f"Successfully prepared imputation pipeline run")
+    logging.info(f"Successfully prepared imputation pipeline run. Job ID: {request_body['jobId']}")
     response = json.loads(response.text)
 
     return response['jobId'], response['fileInputUploadUrls']
@@ -99,20 +101,21 @@ def start_imputation_pipeline(jobId, teaspoons_url, token):
 
 
 # poll for imputation beagle job; if successful, return the pipelineRunReport.outputs object (dict)
-def poll_for_imputation_job(result_url, token):
-
-    logging.info("sleeping for 5 minutes so pipeline has time to complete")
+def poll_for_imputation_job(result_url, token, sleep_interval_mins=1, total_timeout_mins=25):
     # start by sleeping for 5 minutes
+    logging.info("Sleeping for 5 minutes before polling for status...")
     time.sleep(5 * 60)
 
-    # waiting for 25 total minutes, initial 5 minutes then 20 intervals of 1 minute each
-    poll_count = 20
+    remaining_timeout_minutes = total_timeout_mins - 5
+    poll_count = remaining_timeout_minutes / sleep_interval_mins
+
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json",
         "Content-Type": "application/json"
     }
 
+    # poll for job completion until we get a 200 status code, or we hit our timeout
     while poll_count >= 0:
         response = requests.get(result_url, headers=headers)
         status_code = response.status_code
@@ -120,22 +123,21 @@ def poll_for_imputation_job(result_url, token):
         if status_code == 200:
             # job is completed, test for status
             response = json.loads(response.text)
-            logging.info(f'teaspoons pipeline completed with 200 status')
+            logging.info(f'Pipeline run completed with 200 status')
             if response['jobReport']['status'] == 'SUCCEEDED':
-                logging.info(f"teaspoons pipeline has succeeded: {response}")
                 # return the pipeline output dictionary
                 return response['pipelineRunReport']['outputs']
             else:
-                raise Exception(f'teaspoons pipeline failed: {response}')
+                raise Exception(f'Pipeline run failed. Response: {response}')
         elif status_code == 202:
-            logging.info("teaspoons pipeline still running, sleeping for 1 minute")
+            logging.info(f"Pipeline is still Running, sleeping for {sleep_interval_mins} minute(s) before polling again")
             # job is still running, sleep for the next poll
-            time.sleep(1 * 60)
+            time.sleep(sleep_interval_mins * 60)
         else:
-            raise Exception(f'teaspoons pipeline failed with a {status_code} status code. has response {response.text}')
+            raise Exception(f'Pipeline run failed with a {status_code} status code. Response: {response.text}')
         poll_count -= 1
 
-    raise Exception(f"teaspoons pipeline did not complete in 25 minutes")
+    raise Exception(f"Pipeline run did not complete in {total_timeout_mins} minutes. Timing out.")
 
 def get_output_signed_urls(teaspoons_url, job_id, token):
     """
@@ -172,7 +174,8 @@ def get_output_signed_urls(teaspoons_url, job_id, token):
 
     return response['outputSignedUrls']
 
-def query_for_user_quota_consumed(teaspoons_url, token):
+# Get quota details for a user, including quota limit and quota consumed for the array imputation pipeline
+def get_user_quota_details(teaspoons_url, token):
 
     uri = f"{teaspoons_url}/api/quotas/v1/array_imputation"
     headers = {
@@ -189,13 +192,23 @@ def query_for_user_quota_consumed(teaspoons_url, token):
     
     response = json.loads(response.text)
 
-    logging.info(f"Successfully retrieved user quotaConsumed")
+    logging.info(f"Retrieved user quota details")
 
-    return response['quotaConsumed']
+    return response
 
 ## GCS FILE FUNCTIONS
+# Upload a file to a signed url
+def upload_file_with_signed_url(signed_url, local_file_path):
+    with open(file=local_file_path, mode="rb") as blob_file:
+        data = blob_file.read()
+        logging.info("Preparing to upload file to signed url")
+        headers = {
+            'Content-Type': 'application/octet-stream'
+        }
+        requests.put(signed_url, headers=headers, data=data)
+
 # write a hello world text file and upload using a signed url
-def upload_file_with_signed_url(signed_url):
+def upload_mock_file_with_signed_url(signed_url):
     # use a temporary directory that will get cleaned up after this block
     with tempfile.TemporaryDirectory() as tmpdirname:
         local_file_path = os.path.join(tmpdirname, "temp_file")
@@ -205,16 +218,10 @@ def upload_file_with_signed_url(signed_url):
             blob_file.write("Hello, World!")
         
         # upload the file
-        with open(file=local_file_path, mode="rb") as blob_file:
-            data = blob_file.read()
-            logging.info("preparing to upload blob")
-            headers = {
-                'Content-Type': 'application/octet-stream'
-            }
-            requests.put(signed_url, headers=headers, data=data)
+        upload_file_with_signed_url(signed_url, local_file_path)
 
 # download a file from a signed url
-def download_with_signed_url(signed_url):
+def download_and_verify_outputs(output_name, signed_url):
     # extract file name from signed url; signed url looks like:
     # https://storage.googleapis.com/fc-secure-6970c3a9-dc92-436d-af3d-917bcb4cf05a/test_signed_urls/helloworld.txt?x-goog-signature...
     local_file_name = signed_url.split("?")[0].split("/")[-1]
@@ -226,6 +233,35 @@ def download_with_signed_url(signed_url):
         with open(file=local_file_path, mode="wb") as blob_file:
             download_stream = requests.get(signed_url).content
             blob_file.write(download_stream)
+
+        file_size = os.path.getsize(local_file_path)
+        if file_size == 0:
+            raise Exception(f"Output file {output_name} is empty")
+
+        logging.info(f"Successfully downloaded output {output_name}. File size: {file_size} bytes")
+
+# Downloads a file from a GCS bucket using access token credentials
+def download_file_from_gcs(bucket_name, source_file_path, local_file_dir, access_token):
+    try:
+        credentials = Credentials(token=access_token)
+        storage_client = storage.Client(credentials=credentials, project=None)
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(source_file_path)
+
+        if not blob.exists(storage_client):
+            raise Exception("Source file does not exist or permission denied")
+
+        # Make sure local_file_dir is a directory, then create full path
+        if os.path.isdir(local_file_dir):
+            local_file_path = os.path.join(local_file_dir, os.path.basename(source_file_path))
+        else:
+            local_file_path = local_file_dir  # user passed full path already
+
+        blob.download_to_filename(local_file_path)
+    except Exception as e:
+        raise Exception(f"Failed to download input file from GCS: {str(e)}")
+
+    logging.info(f"Downloaded {os.path.basename(source_file_path)} to {local_file_path}")
 
 ## GROUP MANAGEMENT FUNCTIONS
 def create_and_populate_terra_group(orch_url, group_name, group_admins, group_members, token):
@@ -301,7 +337,7 @@ def update_quota_limit_for_user(sam_url, teaspoons_url, admin_token, user_email,
     if status_code != 200:
         raise Exception(response.text)
 
-    logging.info(f"Successfully retrieved user info for {user_email}")
+    logging.info(f"Retrieved user info for {user_email} from Sam")
 
     # parse the response to get the user ID
     response = json.loads(response.text)
@@ -324,3 +360,24 @@ def update_quota_limit_for_user(sam_url, teaspoons_url, admin_token, user_email,
         raise Exception(response.text)
 
     logging.info(f"Successfully updated quota for user {user_email} to {new_quota_limit}")
+
+# Get the details for a given pipeline and pipeline version
+def get_pipeline_details(teaspoons_url, pipeline_name, pipeline_version, user_token):
+    uri = f"{teaspoons_url}/api/pipelines/v1/{pipeline_name}"
+    headers = {
+        "Authorization": f"Bearer {user_token}",
+        "accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    request_body = {
+        "pipelineVersion": pipeline_version
+    }
+
+    response = requests.post(uri, headers=headers, json=request_body)
+    status_code = response.status_code
+    if status_code != 200:
+        raise Exception(response.text)
+
+    logging.info(f"Retrieved pipeline details for {pipeline_name} version {pipeline_version}")
+
+    return response.json()

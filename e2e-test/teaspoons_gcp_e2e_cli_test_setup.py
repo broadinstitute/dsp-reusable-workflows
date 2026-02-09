@@ -3,7 +3,7 @@ import time
 from workspace_helper import create_gcp_workspace, delete_workspace, share_workspace_grant_owner, add_wdl_to_gcp_workspace
 from helper import create_gcp_billing_project, delete_gcp_billing_project
 from teaspoons_helper import create_and_populate_terra_group, update_imputation_pipeline_workspace, \
-    ping_until_200_with_timeout, query_for_user_quota_consumed, update_quota_limit_for_user
+    ping_until_200_with_timeout, get_user_quota_details, update_quota_limit_for_user
 
 import os
 import logging
@@ -124,7 +124,7 @@ try:
     update_imputation_pipeline_workspace(teaspoons_url, billing_project_name, workspace_name, wdl_method_version, admin_token)
 
     # query for user quota consumed before running pipeline, expect 0
-    assert 0 == query_for_user_quota_consumed(teaspoons_url, user_token)
+    assert 0 == get_user_quota_details(teaspoons_url, user_token)['quotaConsumed']
     
     # update user quota limit to 3000
     update_quota_limit_for_user(sam_url, teaspoons_url, admin_token, user_email, 3000)
