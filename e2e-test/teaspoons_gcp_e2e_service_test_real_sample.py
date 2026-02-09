@@ -11,13 +11,13 @@ import subprocess
 
 # configure logging format
 LOG_FORMAT = "%(asctime)s %(levelname)-8s %(message)s"
-LOG_LEVEL = "INFO"
+LOG_LEVEL = "DEBUG"
 LOG_DATEFORMAT = "%Y-%m-%d %H:%M:%S"
 logging.basicConfig(
     format=LOG_FORMAT,
     level=getattr(logging, LOG_LEVEL),
     datefmt=LOG_DATEFORMAT,
-    # force=True  # override any existing logging configuration
+    force=True  # override any existing logging configuration
 )
 
 # Setup configuration
