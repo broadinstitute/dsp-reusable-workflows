@@ -130,7 +130,7 @@ def poll_for_imputation_job(result_url, token, sleep_interval_mins=1, total_time
             else:
                 raise Exception(f'Pipeline run failed. Response: {response}')
         elif status_code == 202:
-            logging.info(f"Pipeline is still Running, sleeping for {sleep_interval_mins} minute(s) before polling again")
+            logging.info(f"Pipeline is still Running. Sleeping for {sleep_interval_mins} minute(s) before polling again")
             # job is still running, sleep for the next poll
             time.sleep(sleep_interval_mins * 60)
         else:
