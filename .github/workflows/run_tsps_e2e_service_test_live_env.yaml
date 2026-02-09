@@ -71,4 +71,4 @@ jobs:
           INPUT_VCF_FILE_NAME: 'NA12878_10_samples_chr1_chr20.vcf.gz' # ${{ inputs.input_vcf_file_name }}
         run: |
           cd dsp-reusable-workflows/
-          python e2e-test/teaspoons_gcp_e2e_service_test_real_sample.py
+          python e2e-test/teaspoons_gcp_e2e_service_test_live_env.py
