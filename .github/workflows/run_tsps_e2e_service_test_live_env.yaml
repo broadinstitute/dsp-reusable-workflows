@@ -1,7 +1,7 @@
 name: run_tsps_e2e_service_test_live_env.yml
 
 on:
-  pull_request: # TODO: remove this before merge
+  pull_request: {} # TODO: remove this before merge
   workflow_dispatch: # change this to workflow_call before merge
     inputs:
       env-name:

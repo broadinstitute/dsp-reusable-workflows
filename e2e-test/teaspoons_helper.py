@@ -17,6 +17,7 @@ logging.basicConfig(
     format=LOG_FORMAT,
     level=getattr(logging, LOG_LEVEL),
     datefmt=LOG_DATEFORMAT,
+    force=True  # override any existing logging configuration
 )
 
 # update workspace id for imputation beagle pipeline
