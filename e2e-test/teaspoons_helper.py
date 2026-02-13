@@ -6,8 +6,6 @@ import uuid
 import time
 import tempfile
 import urllib.parse
-from google.cloud import storage
-from google.oauth2.credentials import Credentials
 
 # configure logging format
 LOG_FORMAT = "%(asctime)s %(levelname)-8s %(message)s"
@@ -193,7 +191,7 @@ def get_user_quota_details(teaspoons_url, token):
     
     response = json.loads(response.text)
 
-    logging.info(f"Retrieved user quota details")
+    logging.info(f"Retrieved quota details for the test user")
 
     return response
 
@@ -222,14 +220,14 @@ def upload_mock_file_with_signed_url(signed_url):
         upload_file_with_signed_url(signed_url, local_file_path)
 
 # download a file from a signed url
-def download_and_verify_outputs(output_name, signed_url):
+def download_and_verify_output_size(output_name, signed_url):
     # extract file name from signed url; signed url looks like:
     # https://storage.googleapis.com/fc-secure-6970c3a9-dc92-436d-af3d-917bcb4cf05a/test_signed_urls/helloworld.txt?x-goog-signature...
     local_file_name = signed_url.split("?")[0].split("/")[-1]
     # use a temporary directory that will get cleaned up after this block
     with tempfile.TemporaryDirectory() as tmpdirname:
         local_file_path = os.path.join(tmpdirname, local_file_name)
-        
+
         # download the file and write to local file
         with open(file=local_file_path, mode="wb") as blob_file:
             download_stream = requests.get(signed_url).content
@@ -237,32 +235,9 @@ def download_and_verify_outputs(output_name, signed_url):
 
         file_size = os.path.getsize(local_file_path)
         if file_size == 0:
-            raise Exception(f"Output file {output_name} is empty")
+            raise Exception(f"Output file for `{output_name}` is empty")
 
-        logging.info(f"Successfully downloaded output {output_name}. File size: {file_size} bytes")
-
-# Downloads a file from a GCS bucket using access token credentials
-def download_file_from_gcs(bucket_name, source_file_path, local_file_dir, access_token):
-    try:
-        credentials = Credentials(token=access_token)
-        storage_client = storage.Client(credentials=credentials, project=None)
-        bucket = storage_client.bucket(bucket_name)
-        blob = bucket.blob(source_file_path)
-
-        if not blob.exists(storage_client):
-            raise Exception("Source file does not exist or permission denied")
-
-        # Make sure local_file_dir is a directory, then create full path
-        if os.path.isdir(local_file_dir):
-            local_file_path = os.path.join(local_file_dir, os.path.basename(source_file_path))
-        else:
-            local_file_path = local_file_dir  # user passed full path already
-
-        blob.download_to_filename(local_file_path)
-    except Exception as e:
-        raise Exception(f"Failed to download input file from GCS: {str(e)}")
-
-    logging.info(f"Downloaded {os.path.basename(source_file_path)} to {local_file_path}")
+        logging.info(f"Successfully downloaded output `{output_name}`. File size: {file_size} bytes")
 
 ## GROUP MANAGEMENT FUNCTIONS
 def create_and_populate_terra_group(orch_url, group_name, group_admins, group_members, token):
@@ -361,24 +336,3 @@ def update_quota_limit_for_user(sam_url, teaspoons_url, admin_token, user_email,
         raise Exception(response.text)
 
     logging.info(f"Successfully updated quota for user {user_email} to {new_quota_limit}")
-
-# Get the details for a given pipeline and pipeline version
-def get_pipeline_details(teaspoons_url, pipeline_name, pipeline_version, user_token):
-    uri = f"{teaspoons_url}/api/pipelines/v1/{pipeline_name}"
-    headers = {
-        "Authorization": f"Bearer {user_token}",
-        "accept": "application/json",
-        "Content-Type": "application/json"
-    }
-    request_body = {
-        "pipelineVersion": pipeline_version
-    }
-
-    response = requests.post(uri, headers=headers, json=request_body)
-    status_code = response.status_code
-    if status_code != 200:
-        raise Exception(response.text)
-
-    logging.info(f"Retrieved pipeline details for {pipeline_name} version {pipeline_version}")
-
-    return response.json()

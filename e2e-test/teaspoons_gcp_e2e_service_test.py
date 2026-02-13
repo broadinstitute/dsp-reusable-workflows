@@ -5,7 +5,7 @@ from helper import create_gcp_billing_project, delete_gcp_billing_project
 from teaspoons_helper import (
     create_and_populate_terra_group, update_imputation_pipeline_workspace, get_user_quota_details,
     prepare_imputation_pipeline, upload_mock_file_with_signed_url, start_imputation_pipeline, poll_for_imputation_job,
-    download_and_verify_outputs, ping_until_200_with_timeout, update_quota_limit_for_user, get_output_signed_urls
+    download_and_verify_output_size, ping_until_200_with_timeout, update_quota_limit_for_user, get_output_signed_urls
 )
 
 import os
@@ -161,7 +161,7 @@ try:
     # grab data using signed url
     for key, value in signed_urls.items():
         logging.info(f"attempting to retrieve {key} output")
-        download_and_verify_outputs(key, value)
+        download_and_verify_output_size(key, value)
         logging.info("successfully downloaded file")
 
     # query for user quota consumed after running pipeline, expect an increase of 500
