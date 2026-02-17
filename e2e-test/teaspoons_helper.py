@@ -100,7 +100,7 @@ def start_imputation_pipeline(jobId, teaspoons_url, token):
 
 
 # poll for imputation beagle job; if successful, return the pipelineRunReport.outputs object (dict)
-def poll_for_imputation_job(result_url, token, sleep_interval_mins=1, total_timeout_mins=25):
+def poll_for_imputation_job(result_url, sleep_interval_mins=1, total_timeout_mins=25, token=None, credentials=None):
     # start by sleeping for 5 minutes
     logging.info("Sleeping for 5 minutes before polling for status...")
     time.sleep(5 * 60)
@@ -220,7 +220,7 @@ def upload_mock_file_with_signed_url(signed_url):
         upload_file_with_signed_url(signed_url, local_file_path)
 
 # download a file from a signed url
-def download_and_verify_output_size(output_name, signed_url):
+def validate_output_not_empty(output_name, signed_url):
     # extract file name from signed url; signed url looks like:
     # https://storage.googleapis.com/fc-secure-6970c3a9-dc92-436d-af3d-917bcb4cf05a/test_signed_urls/helloworld.txt?x-goog-signature...
     local_file_name = signed_url.split("?")[0].split("/")[-1]
