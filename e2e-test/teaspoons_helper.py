@@ -53,7 +53,7 @@ def prepare_imputation_pipeline(teaspoons_url, token):
         "description": "e2e test run"
     }
 
-    uri = f"{teaspoons_url}/api/pipelineruns/v1/prepare"
+    uri = f"{teaspoons_url}/api/pipelineruns/v2/prepare"
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json",
