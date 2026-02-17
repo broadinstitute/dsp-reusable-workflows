@@ -220,7 +220,7 @@ def upload_mock_file_with_signed_url(signed_url):
         upload_file_with_signed_url(signed_url, local_file_path)
 
 # download a file from a signed url
-def validate_output_not_empty(output_name, signed_url):
+def download_and_verify_output(output_name, signed_url, skip_size_check=False):
     # extract file name from signed url; signed url looks like:
     # https://storage.googleapis.com/fc-secure-6970c3a9-dc92-436d-af3d-917bcb4cf05a/test_signed_urls/helloworld.txt?x-goog-signature...
     local_file_name = signed_url.split("?")[0].split("/")[-1]
@@ -233,11 +233,15 @@ def validate_output_not_empty(output_name, signed_url):
             download_stream = requests.get(signed_url).content
             blob_file.write(download_stream)
 
-        file_size = os.path.getsize(local_file_path)
-        if file_size == 0:
-            raise Exception(f"Output file for `{output_name}` is empty")
+        if skip_size_check:
+            logging.info(f"Successfully downloaded output `{output_name}`.")
+            return
+        else:
+            file_size = os.path.getsize(local_file_path)
+            if file_size == 0:
+                raise Exception(f"Output file for `{output_name}` is empty")
 
-        logging.info(f"Successfully downloaded output `{output_name}`. File size: {file_size} bytes")
+            logging.info(f"Successfully downloaded output `{output_name}`. File size: {file_size} bytes")
 
 ## GROUP MANAGEMENT FUNCTIONS
 def create_and_populate_terra_group(orch_url, group_name, group_admins, group_members, token):
