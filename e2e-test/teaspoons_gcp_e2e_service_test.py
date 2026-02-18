@@ -162,7 +162,6 @@ try:
     for key, value in signed_urls.items():
         logging.info(f"attempting to retrieve {key} output")
         download_and_verify_output(key, value, skip_size_check=True)
-        logging.info("successfully downloaded file")
 
     # query for user quota consumed after running pipeline, expect an increase of 500
     # because that is the min quota consumed for array_imputation
