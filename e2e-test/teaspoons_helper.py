@@ -15,6 +15,7 @@ logging.basicConfig(
     format=LOG_FORMAT,
     level=getattr(logging, LOG_LEVEL),
     datefmt=LOG_DATEFORMAT,
+    force=True  # override any existing logging configuration
 )
 
 # update workspace id for imputation beagle pipeline
@@ -41,16 +42,16 @@ def update_imputation_pipeline_workspace(teaspoons_url, workspace_project, works
     logging.info(f"successfully updated imputation pipeline workspace and tool version to: {workspace_project}, {workspace_name}, {wdl_method_version}")
 
 
-def prepare_imputation_pipeline(teaspoons_url, token):
+def prepare_imputation_pipeline(teaspoons_url, multi_sample_vcf_input_path, output_basename, token):
     request_body = {
         "jobId": f'{uuid.uuid4()}',
         "pipelineName": "array_imputation",
         "pipelineVersion": 1,
         "pipelineInputs": {
-            "multiSampleVcf": "this/is/a/fake/file.vcf.gz",
-            "outputBasename": "fake_basename"
+            "multiSampleVcf": f'{multi_sample_vcf_input_path}',
+            "outputBasename": f'{output_basename}'
         },
-        "description": "e2e test run"
+        "description": "GHA e2e test run"
     }
 
     uri = f"{teaspoons_url}/api/pipelineruns/v2/prepare"
@@ -66,7 +67,7 @@ def prepare_imputation_pipeline(teaspoons_url, token):
     if status_code != 200:
         raise Exception(response.text)
 
-    logging.info(f"Successfully prepared imputation pipeline run")
+    logging.info(f"Successfully prepared imputation pipeline run. Job ID: {request_body['jobId']}")
     response = json.loads(response.text)
 
     return response['jobId'], response['fileInputUploadUrls']
@@ -99,20 +100,21 @@ def start_imputation_pipeline(jobId, teaspoons_url, token):
 
 
 # poll for imputation beagle job; if successful, return the pipelineRunReport.outputs object (dict)
-def poll_for_imputation_job(result_url, token):
-
-    logging.info("sleeping for 5 minutes so pipeline has time to complete")
+def poll_for_imputation_job(result_url, sleep_interval_mins=1, total_timeout_mins=25, token=None, credentials=None):
     # start by sleeping for 5 minutes
+    logging.info("Sleeping for 5 minutes before polling for status...")
     time.sleep(5 * 60)
 
-    # waiting for 25 total minutes, initial 5 minutes then 20 intervals of 1 minute each
-    poll_count = 20
+    remaining_timeout_minutes = total_timeout_mins - 5
+    poll_count = remaining_timeout_minutes / sleep_interval_mins
+
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json",
         "Content-Type": "application/json"
     }
 
+    # poll for job completion until we get a 200 status code, or we hit our timeout
     while poll_count >= 0:
         response = requests.get(result_url, headers=headers)
         status_code = response.status_code
@@ -120,22 +122,21 @@ def poll_for_imputation_job(result_url, token):
         if status_code == 200:
             # job is completed, test for status
             response = json.loads(response.text)
-            logging.info(f'teaspoons pipeline completed with 200 status')
+            logging.info(f'Pipeline run completed with 200 status')
             if response['jobReport']['status'] == 'SUCCEEDED':
-                logging.info(f"teaspoons pipeline has succeeded: {response}")
                 # return the pipeline output dictionary
                 return response['pipelineRunReport']['outputs']
             else:
-                raise Exception(f'teaspoons pipeline failed: {response}')
+                raise Exception(f'Pipeline run failed. Response: {response}')
         elif status_code == 202:
-            logging.info("teaspoons pipeline still running, sleeping for 1 minute")
+            logging.info(f"Pipeline is still Running. Sleeping for {sleep_interval_mins} minute(s) before polling again")
             # job is still running, sleep for the next poll
-            time.sleep(1 * 60)
+            time.sleep(sleep_interval_mins * 60)
         else:
-            raise Exception(f'teaspoons pipeline failed with a {status_code} status code. has response {response.text}')
+            raise Exception(f'Pipeline run failed with a {status_code} status code. Response: {response.text}')
         poll_count -= 1
 
-    raise Exception(f"teaspoons pipeline did not complete in 25 minutes")
+    raise Exception(f"Pipeline run did not complete in {total_timeout_mins} minutes. Timing out.")
 
 def get_output_signed_urls(teaspoons_url, job_id, token):
     """
@@ -172,7 +173,8 @@ def get_output_signed_urls(teaspoons_url, job_id, token):
 
     return response['outputSignedUrls']
 
-def query_for_user_quota_consumed(teaspoons_url, token):
+# Get quota details for a user, including quota limit and quota consumed for the array imputation pipeline
+def get_user_quota_details(teaspoons_url, token):
 
     uri = f"{teaspoons_url}/api/quotas/v1/array_imputation"
     headers = {
@@ -189,13 +191,23 @@ def query_for_user_quota_consumed(teaspoons_url, token):
     
     response = json.loads(response.text)
 
-    logging.info(f"Successfully retrieved user quotaConsumed")
+    logging.info(f"Retrieved quota details for the test user")
 
-    return response['quotaConsumed']
+    return response
 
 ## GCS FILE FUNCTIONS
+# Upload a file to a signed url
+def upload_file_with_signed_url(signed_url, local_file_path):
+    with open(file=local_file_path, mode="rb") as blob_file:
+        data = blob_file.read()
+        logging.info("Preparing to upload file to signed url")
+        headers = {
+            'Content-Type': 'application/octet-stream'
+        }
+        requests.put(signed_url, headers=headers, data=data)
+
 # write a hello world text file and upload using a signed url
-def upload_file_with_signed_url(signed_url):
+def upload_mock_file_with_signed_url(signed_url):
     # use a temporary directory that will get cleaned up after this block
     with tempfile.TemporaryDirectory() as tmpdirname:
         local_file_path = os.path.join(tmpdirname, "temp_file")
@@ -205,27 +217,31 @@ def upload_file_with_signed_url(signed_url):
             blob_file.write("Hello, World!")
         
         # upload the file
-        with open(file=local_file_path, mode="rb") as blob_file:
-            data = blob_file.read()
-            logging.info("preparing to upload blob")
-            headers = {
-                'Content-Type': 'application/octet-stream'
-            }
-            requests.put(signed_url, headers=headers, data=data)
+        upload_file_with_signed_url(signed_url, local_file_path)
 
 # download a file from a signed url
-def download_with_signed_url(signed_url):
+def download_and_verify_output(output_name, signed_url, skip_size_check=False):
     # extract file name from signed url; signed url looks like:
     # https://storage.googleapis.com/fc-secure-6970c3a9-dc92-436d-af3d-917bcb4cf05a/test_signed_urls/helloworld.txt?x-goog-signature...
     local_file_name = signed_url.split("?")[0].split("/")[-1]
     # use a temporary directory that will get cleaned up after this block
     with tempfile.TemporaryDirectory() as tmpdirname:
         local_file_path = os.path.join(tmpdirname, local_file_name)
-        
+
         # download the file and write to local file
         with open(file=local_file_path, mode="wb") as blob_file:
             download_stream = requests.get(signed_url).content
             blob_file.write(download_stream)
+
+        if skip_size_check:
+            logging.info(f"Successfully downloaded output `{output_name}`.")
+            return
+        else:
+            file_size = os.path.getsize(local_file_path)
+            if file_size == 0:
+                raise Exception(f"Output file for `{output_name}` is empty")
+
+            logging.info(f"Successfully downloaded output `{output_name}`. File size: {file_size} bytes")
 
 ## GROUP MANAGEMENT FUNCTIONS
 def create_and_populate_terra_group(orch_url, group_name, group_admins, group_members, token):
@@ -301,7 +317,7 @@ def update_quota_limit_for_user(sam_url, teaspoons_url, admin_token, user_email,
     if status_code != 200:
         raise Exception(response.text)
 
-    logging.info(f"Successfully retrieved user info for {user_email}")
+    logging.info(f"Retrieved user info for {user_email} from Sam")
 
     # parse the response to get the user ID
     response = json.loads(response.text)

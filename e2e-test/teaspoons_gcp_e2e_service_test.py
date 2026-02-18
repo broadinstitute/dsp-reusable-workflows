@@ -3,9 +3,9 @@ import time
 from workspace_helper import create_gcp_workspace, delete_workspace, share_workspace_grant_owner, add_wdl_to_gcp_workspace
 from helper import create_gcp_billing_project, delete_gcp_billing_project
 from teaspoons_helper import (
-    create_and_populate_terra_group, update_imputation_pipeline_workspace, query_for_user_quota_consumed,
-    prepare_imputation_pipeline, upload_file_with_signed_url, start_imputation_pipeline, poll_for_imputation_job,
-    download_with_signed_url, ping_until_200_with_timeout, update_quota_limit_for_user, get_output_signed_urls
+    create_and_populate_terra_group, update_imputation_pipeline_workspace, get_user_quota_details,
+    prepare_imputation_pipeline, upload_mock_file_with_signed_url, start_imputation_pipeline, poll_for_imputation_job,
+    download_and_verify_output, ping_until_200_with_timeout, update_quota_limit_for_user, get_output_signed_urls
 )
 
 import os
@@ -44,6 +44,7 @@ logging.basicConfig(
     format=LOG_FORMAT,
     level=getattr(logging, LOG_LEVEL),
     datefmt=LOG_DATEFORMAT,
+    force=True  # override any existing logging configuration
 )
 
 # ---------------------- Start Teaspoons GCP E2E test ----------------------
@@ -129,19 +130,19 @@ try:
     update_imputation_pipeline_workspace(teaspoons_url, billing_project_name, workspace_name, wdl_method_version, admin_token)
 
     # query for user quota consumed before running pipeline, expect the default of 0
-    assert 0 == query_for_user_quota_consumed(teaspoons_url, user_token)
+    assert 0 == get_user_quota_details(teaspoons_url, user_token)['quotaConsumed']
 
     # update user quota limit to 3000
     update_quota_limit_for_user(sam_url, teaspoons_url, admin_token, user_email, 3000)
 
     # prepare teaspoons imputation pipeline run
     logging.info("preparing imputation pipeline run")
-    job_id, pipeline_file_inputs = prepare_imputation_pipeline(teaspoons_url, user_token)
+    job_id, pipeline_file_inputs = prepare_imputation_pipeline(teaspoons_url, "this/is/a/fake/file.vcf.gz", "fake_basename",  user_token)
 
     # make sure we got a writable signed url
     for key, value in pipeline_file_inputs.items():
         logging.info(f"attempting to upload a file to {key} input")
-        upload_file_with_signed_url(value['signedUrl'])
+        upload_mock_file_with_signed_url(value['signedUrl'])
         logging.info("successfully uploaded file")
 
     # start pipeline run
@@ -152,7 +153,7 @@ try:
 
     # poll for imputation pipeline
     logging.info("polling for imputation pipeline")
-    poll_for_imputation_job(result_url, user_token)
+    poll_for_imputation_job(result_url, token=user_token)
 
     # generate output signed urls
     signed_urls = get_output_signed_urls(teaspoons_url, job_id, user_token)
@@ -160,12 +161,11 @@ try:
     # grab data using signed url
     for key, value in signed_urls.items():
         logging.info(f"attempting to retrieve {key} output")
-        download_with_signed_url(value)
-        logging.info("successfully downloaded file")
+        download_and_verify_output(key, value, skip_size_check=True)
 
     # query for user quota consumed after running pipeline, expect an increase of 500
     # because that is the min quota consumed for array_imputation
-    assert 500 == query_for_user_quota_consumed(teaspoons_url, user_token)
+    assert 500 == get_user_quota_details(teaspoons_url, user_token)['quotaConsumed']
 
     logging.info("TEST COMPLETE")
 
